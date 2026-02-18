@@ -1,10 +1,9 @@
-import type { RouterClient } from "@orpc/server";
-import type { AppRouter } from "@terryscord/api/routers/index";
-
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
+import type { RouterClient } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { QueryCache, QueryClient } from "@tanstack/react-query";
+import type { AppRouter } from "@terryscord/api/routers/index";
 import { env } from "@terryscord/env/web";
 import { toast } from "sonner";
 
@@ -22,18 +21,16 @@ export const queryClient = new QueryClient({
 });
 
 const link = new RPCLink({
-  url: `${env.VITE_SERVER_URL}/rpc`,
   fetch(url, options) {
     return fetch(url, {
       ...options,
       credentials: "include",
     });
   },
+  url: `${env.VITE_SERVER_URL}/rpc`,
 });
 
-const getORPCClient = () => {
-  return createORPCClient(link) as RouterClient<AppRouter>;
-};
+const getORPCClient = () => createORPCClient(link) as RouterClient<AppRouter>;
 
 export const client: RouterClient<AppRouter> = getORPCClient();
 

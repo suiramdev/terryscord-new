@@ -14,6 +14,20 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 
+const createSignOutClickHandler =
+  (navigate: ReturnType<typeof useNavigate>): (() => void) =>
+  () => {
+    authClient.signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          navigate({
+            to: "/",
+          });
+        },
+      },
+    });
+  };
+
 export default function UserMenu() {
   const navigate = useNavigate();
   const { data: session, isPending } = authClient.useSession();
@@ -42,17 +56,7 @@ export default function UserMenu() {
           <DropdownMenuItem>{session.user.email}</DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
-            onClick={() => {
-              authClient.signOut({
-                fetchOptions: {
-                  onSuccess: () => {
-                    navigate({
-                      to: "/",
-                    });
-                  },
-                },
-              });
-            }}
+            onClick={createSignOutClickHandler(navigate)}
           >
             Sign Out
           </DropdownMenuItem>

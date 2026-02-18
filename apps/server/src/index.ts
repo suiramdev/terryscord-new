@@ -1,7 +1,6 @@
 import { cors } from "@elysiajs/cors";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
-import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { createContext } from "@terryscord/api/context";
@@ -11,35 +10,27 @@ import { env } from "@terryscord/env/server";
 import { Elysia } from "elysia";
 
 const rpcHandler = new RPCHandler(appRouter, {
-  interceptors: [
-    onError((error) => {
-      console.error(error);
-    }),
-  ],
+  interceptors: [],
 });
 const apiHandler = new OpenAPIHandler(appRouter, {
+  interceptors: [],
   plugins: [
     new OpenAPIReferencePlugin({
       schemaConverters: [new ZodToJsonSchemaConverter()],
     }),
   ],
-  interceptors: [
-    onError((error) => {
-      console.error(error);
-    }),
-  ],
 });
 
-const app = new Elysia()
+export const app = new Elysia()
   .use(
     cors({
-      origin: env.CORS_ORIGIN,
-      methods: ["GET", "POST", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
       credentials: true,
-    }),
+      methods: ["GET", "POST", "OPTIONS"],
+      origin: env.CORS_ORIGIN,
+    })
   )
-  .all("/api/auth/*", async (context) => {
+  .all("/api/auth/*", (context) => {
     const { request, status } = context;
     if (["POST", "GET"].includes(request.method)) {
       return auth.handler(request);
@@ -48,15 +39,15 @@ const app = new Elysia()
   })
   .all("/rpc*", async (context) => {
     const { response } = await rpcHandler.handle(context.request, {
-      prefix: "/rpc",
       context: await createContext({ context }),
+      prefix: "/rpc",
     });
     return response ?? new Response("Not Found", { status: 404 });
   })
   .all("/api*", async (context) => {
     const { response } = await apiHandler.handle(context.request, {
-      prefix: "/api-reference",
       context: await createContext({ context }),
+      prefix: "/api-reference",
     });
     return response ?? new Response("Not Found", { status: 404 });
   })

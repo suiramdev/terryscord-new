@@ -1,5 +1,21 @@
-bun test
+#!/bin/sh
+set -e
+
+# Run tests only when test files exist. Bun exits non-zero with no tests.
+if rg --files \
+  -g "*.js" \
+  -g "*.jsx" \
+  -g "*.ts" \
+  -g "*.tsx" \
+  -g "*.cjs" \
+  -g "*.mjs" \
+  -g "*.cts" \
+  -g "*.mts" \
+  | rg -q "(\.test\.|_test_|\.spec\.|_spec_)"; then
+  bun test
+else
+  echo "No test files found; skipping bun test."
+fi
 
 # ultracite
-#!/bin/sh
 bun x lint-staged

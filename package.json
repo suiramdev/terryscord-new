@@ -17,8 +17,7 @@
       "@orpc/zod": "^1.12.2",
       "better-auth": "^1.4.18",
       "@prisma/client": "^7.2.0",
-      "@orpc/client": "^1.12.2",
-      "@polar-sh/better-auth": "^1.6.4"
+      "@orpc/client": "^1.12.2"
     }
   },
   "type": "module",
@@ -27,8 +26,10 @@
     "build": "turbo build",
     "check-types": "turbo check-types",
     "dev:native": "turbo -F native dev",
+    "dev:bot": "turbo -F discord-bot dev",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
+    "bot:deploy-commands": "turbo -F discord-bot deploy:commands",
     "db:push": "turbo -F @terryscord/db db:push",
     "db:studio": "turbo -F @terryscord/db db:studio",
     "db:generate": "turbo -F @terryscord/db db:generate",

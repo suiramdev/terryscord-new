@@ -1,18 +1,22 @@
+import { auth } from "@terryscord/auth";
 import type { Context as ElysiaContext } from "elysia";
 
-import { auth } from "@terryscord/auth";
-
-export type CreateContextOptions = {
+export interface CreateContextOptions {
   context: ElysiaContext;
-};
+}
 
-export async function createContext({ context }: CreateContextOptions) {
+export const createContext = async ({
+  context,
+}: CreateContextOptions): Promise<{
+  session: Awaited<ReturnType<typeof auth.api.getSession>>;
+}> => {
   const session = await auth.api.getSession({
     headers: context.request.headers,
   });
+
   return {
     session,
   };
-}
+};
 
 export type Context = Awaited<ReturnType<typeof createContext>>;

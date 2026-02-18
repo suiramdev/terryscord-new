@@ -5,6 +5,9 @@
     ".": {
       "default": "./src/index.ts"
     },
+    "./prisma/generated/*": {
+      "default": "./prisma/generated/*.ts"
+    },
     "./*": {
       "default": "./src/*.ts"
     }

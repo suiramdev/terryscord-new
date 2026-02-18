@@ -3,5 +3,9 @@
   "extends": [
     "./node_modules/ultracite/config/oxlint/core/.oxlintrc.json",
     "./node_modules/ultracite/config/oxlint/react/.oxlintrc.json"
+  ],
+  "ignorePatterns": [
+    "apps/web/src/routeTree.gen.ts",
+    "apps/web/src/components/ui/**"
   ]
 }

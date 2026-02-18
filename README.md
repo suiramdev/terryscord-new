@@ -17,6 +17,7 @@ This project was created with [Better-T-Stack](https://github.com/AmanVarshney01
 - **Husky** - Git hooks for code quality
 - **Oxlint** - Oxlint + Oxfmt (linting & formatting)
 - **Turborepo** - Optimized monorepo build system
+- **Discord Bot** - Bun + discord.js workspace with slash command architecture
 
 ## Getting Started
 
@@ -24,6 +25,19 @@ First, install the dependencies:
 
 ```bash
 bun install
+```
+
+## Discord Bot Setup
+
+1. Create a bot env file from `apps/discord-bot/.env.example`.
+2. Set `DISCORD_BOT_TOKEN` and `DISCORD_CLIENT_ID`.
+3. (Recommended for development) set `DISCORD_GUILD_ID` for fast guild-scoped command registration.
+
+Register slash commands and run the bot:
+
+```bash
+bun run bot:deploy-commands
+bun run dev:bot
 ```
 
 ## Database Setup
@@ -58,6 +72,7 @@ The API is running at [http://localhost:3000](http://localhost:3000).
 ```
 terryscord/
 ├── apps/
+│   ├── discord-bot/ # Discord bot service (commands, events, integrations)
 │   ├── web/         # Frontend application (React + TanStack Start)
 │   └── server/      # Backend API (Elysia, ORPC)
 ├── packages/
@@ -72,6 +87,8 @@ terryscord/
 - `bun run build`: Build all applications
 - `bun run dev:web`: Start only the web application
 - `bun run dev:server`: Start only the server
+- `bun run dev:bot`: Start only the Discord bot
+- `bun run bot:deploy-commands`: Register Discord slash commands
 - `bun run check-types`: Check TypeScript types across all apps
 - `bun run db:push`: Push schema changes to database
 - `bun run db:generate`: Generate database client/types

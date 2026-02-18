@@ -1,19 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
+import type { Dispatch, SetStateAction } from "react";
 import { useState } from "react";
 
 import SignInForm from "@/components/sign-in-form";
 import SignUpForm from "@/components/sign-up-form";
 
-export const Route = createFileRoute("/login")({
-  component: RouteComponent,
-});
+const createModeSwitchHandler =
+  (
+    setShowSignIn: Dispatch<SetStateAction<boolean>>,
+    nextValue: boolean
+  ): (() => void) =>
+  (): void => {
+    setShowSignIn(nextValue);
+  };
 
-function RouteComponent() {
+const RouteComponent = () => {
   const [showSignIn, setShowSignIn] = useState(false);
 
   return showSignIn ? (
-    <SignInForm onSwitchToSignUp={() => setShowSignIn(false)} />
+    <SignInForm
+      onSwitchToSignUp={createModeSwitchHandler(setShowSignIn, false)}
+    />
   ) : (
-    <SignUpForm onSwitchToSignIn={() => setShowSignIn(true)} />
+    <SignUpForm
+      onSwitchToSignIn={createModeSwitchHandler(setShowSignIn, true)}
+    />
   );
-}
+};
+
+export const Route = createFileRoute("/login")({
+  component: RouteComponent,
+});

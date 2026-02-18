@@ -1,7 +1,8 @@
 import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
+import type { ChangeEvent, FormEvent } from "react";
 import { toast } from "sonner";
-import z from "zod";
+import { z } from "zod";
 
 import { authClient } from "@/lib/auth-client";
 
@@ -10,7 +11,25 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 
-export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
+const createFormSubmitHandler =
+  (handleSubmit: () => void) =>
+  (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    handleSubmit();
+  };
+
+const createTextChangeHandler =
+  (handleChange: (value: string) => void) =>
+  (event: ChangeEvent<HTMLInputElement>): void => {
+    handleChange(event.target.value);
+  };
+
+export default function SignInForm({
+  onSwitchToSignUp,
+}: {
+  onSwitchToSignUp: () => void;
+}) {
   const navigate = useNavigate({
     from: "/",
   });
@@ -28,16 +47,16 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
           password: value.password,
         },
         {
+          onError: (error) => {
+            toast.error(error.error.message || error.error.statusText);
+          },
           onSuccess: () => {
             navigate({
               to: "/dashboard",
             });
             toast.success("Sign in successful");
           },
-          onError: (error) => {
-            toast.error(error.error.message || error.error.statusText);
-          },
-        },
+        }
       );
     },
     validators: {
@@ -57,11 +76,7 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
       <h1 className="mb-6 text-center text-3xl font-bold">Welcome Back</h1>
 
       <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          form.handleSubmit();
-        }}
+        onSubmit={createFormSubmitHandler(form.handleSubmit)}
         className="space-y-4"
       >
         <div>
@@ -72,10 +87,10 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
                 <Input
                   id={field.name}
                   name={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={createTextChangeHandler(field.handleChange)}
                   type="email"
                   value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
                 />
                 {field.state.meta.errors.map((error) => (
                   <p key={error?.message} className="text-red-500">
@@ -95,10 +110,10 @@ export default function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () 
                 <Input
                   id={field.name}
                   name={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={createTextChangeHandler(field.handleChange)}
                   type="password"
                   value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
                 />
                 {field.state.meta.errors.map((error) => (
                   <p key={error?.message} className="text-red-500">
