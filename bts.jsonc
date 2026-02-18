@@ -1,0 +1,31 @@
+// Better-T-Stack
+//
+// Website: https://www.better-t-stack.dev/
+// Stack Builder: https://www.better-t-stack.dev/new
+// Analytics: https://www.better-t-stack.dev/analytics
+// Showcase: https://www.better-t-stack.dev/showcase
+// Sponsor: https://github.com/sponsors/AmanVarshney01
+//
+// Add new addons with: bun create better-t-stack add
+// This file is safe to delete
+
+{
+  "$schema": "https://r2.better-t-stack.dev/schema.json",
+  "version": "3.21.0",
+  "createdAt": "2026-02-18T15:50:34.315Z",
+  "reproducibleCommand": "bun create better-t-stack@latest terryscord --frontend tanstack-start --backend elysia --runtime bun --database postgres --orm prisma --api orpc --auth better-auth --payments polar --addons husky oxlint ruler turborepo ultracite --examples none --db-setup docker --web-deploy none --server-deploy none --git --package-manager bun --install",
+  "database": "postgres",
+  "orm": "prisma",
+  "backend": "elysia",
+  "runtime": "bun",
+  "frontend": ["tanstack-start"],
+  "addons": ["husky", "oxlint", "ruler", "turborepo", "ultracite"],
+  "examples": [],
+  "auth": "better-auth",
+  "payments": "polar",
+  "packageManager": "bun",
+  "dbSetup": "docker",
+  "api": "orpc",
+  "webDeploy": "none",
+  "serverDeploy": "none",
+}
