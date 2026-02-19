@@ -1,6 +1,14 @@
-import type { ChatInputCommandInteraction, Interaction } from "discord.js";
+import type {
+  ButtonInteraction,
+  ChatInputCommandInteraction,
+  Interaction,
+} from "discord.js";
 import { log } from "evlog";
 
+import {
+  handleRolePickButtonInteraction,
+  isRolePickButtonCustomId,
+} from "@/commands/role-pick-button";
 import type { SlashCommand } from "@/commands/types";
 import { replyWithEmbed } from "@/discord/embeds";
 import { t } from "@/i18n";
@@ -90,19 +98,74 @@ const executeCommandSafely = async ({
   }
 };
 
-export const handleInteractionCreate = async (
-  interaction: Interaction,
-  commandRegistry: ReadonlyMap<string, SlashCommand>
+const executeRolePickButtonSafely = async (
+  interaction: ButtonInteraction
 ): Promise<void> => {
-  if (!interaction.isChatInputCommand()) {
-    log.debug({
+  const startedAt = Date.now();
+
+  log.debug({
+    channelId: interaction.channelId,
+    customId: interaction.customId,
+    guildId: interaction.guildId,
+    interactionId: interaction.id,
+    message: "Handling role-pick button interaction",
+    userId: interaction.user.id,
+  });
+
+  try {
+    await handleRolePickButtonInteraction(interaction);
+
+    log.info({
+      channelId: interaction.channelId,
+      customId: interaction.customId,
+      durationMs: Date.now() - startedAt,
+      guildId: interaction.guildId,
       interactionId: interaction.id,
-      interactionType: interaction.type,
-      message: "Ignoring non chat-input interaction",
+      message: "Handled role-pick button interaction",
+      userId: interaction.user.id,
     });
-    return;
+  } catch (error: unknown) {
+    log.error({
+      customId: interaction.customId,
+      durationMs: Date.now() - startedAt,
+      err: error,
+      interactionId: interaction.id,
+      message: "Role-pick button interaction failed",
+      userId: interaction.user.id,
+    });
+  }
+};
+
+const handleRolePickButtonIfPresent = async (
+  interaction: Interaction
+): Promise<boolean> => {
+  if (!interaction.isButton()) {
+    return false;
   }
 
+  if (!isRolePickButtonCustomId(interaction.customId)) {
+    return false;
+  }
+
+  await executeRolePickButtonSafely(interaction);
+  return true;
+};
+
+const logIgnoredInteraction = (interaction: Interaction): void => {
+  log.debug({
+    interactionId: interaction.id,
+    interactionType: interaction.type,
+    message: "Ignoring non chat-input interaction",
+  });
+};
+
+const handleChatInputInteraction = async ({
+  commandRegistry,
+  interaction,
+}: {
+  commandRegistry: ReadonlyMap<string, SlashCommand>;
+  interaction: ChatInputCommandInteraction;
+}): Promise<void> => {
   log.debug({
     commandName: interaction.commandName,
     guildId: interaction.guildId,
@@ -112,11 +175,26 @@ export const handleInteractionCreate = async (
   });
 
   const command = commandRegistry.get(interaction.commandName);
-
   if (!command) {
     await replyWithUnknownCommand(interaction);
     return;
   }
 
   await executeCommandSafely({ command, interaction });
+};
+
+export const handleInteractionCreate = async (
+  interaction: Interaction,
+  commandRegistry: ReadonlyMap<string, SlashCommand>
+): Promise<void> => {
+  if (await handleRolePickButtonIfPresent(interaction)) {
+    return;
+  }
+
+  if (!interaction.isChatInputCommand()) {
+    logIgnoredInteraction(interaction);
+    return;
+  }
+
+  await handleChatInputInteraction({ commandRegistry, interaction });
 };

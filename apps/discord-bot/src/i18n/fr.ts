@@ -191,7 +191,6 @@ export const frTranslations = {
   "commands.captcha.resetChoice.captchaCategory": "Catégorie captcha",
   "commands.captcha.resetChoice.captchaType": "Type de captcha",
   "commands.captcha.resetChoice.caseSensitive": "Sensibilité à la casse",
-
   "commands.captcha.resetChoice.channelNameFormat": "Format du nom de salon",
   "commands.captcha.resetChoice.codeLength": "Longueur du code",
   "commands.captcha.resetChoice.debugLogging": "Journalisation debug",
@@ -216,13 +215,13 @@ export const frTranslations = {
     "Définir le format de nom des salons captcha temporaires",
   "commands.captcha.sub.codeLength.description":
     "Définir la longueur du code captcha",
-
   "commands.captcha.sub.debugLogging.description":
     "Activer ou désactiver les logs de debug captcha",
   "commands.captcha.sub.debugRun.description":
     "Développement uniquement : déclencher le workflow captcha pour un membre existant",
   "commands.captcha.sub.kickOnFailure.description":
     "Activer ou désactiver l'expulsion des utilisateurs qui échouent",
+
   "commands.captcha.sub.maxAttempts.description":
     "Définir le seuil d'essais ratés avant alerte admin",
   "commands.captcha.sub.noiseLevel.description":
@@ -251,17 +250,152 @@ export const frTranslations = {
     "Choisir comment cibler la suppression",
   "commands.deleteCategoryChannels.sub.advanced.description":
     "Sous-commande avancée de suppression multi-cible",
+  "commands.embed.description":
+    "Créer et envoyer un embed avec des options structurées",
+  "commands.embed.option.authorIconUrl.description":
+    "embed.author.iconURL (URL http/https)",
+
+  "commands.embed.option.authorName.description":
+    "embed.author.name (requis pour utiliser author.url/iconURL)",
+  "commands.embed.option.authorUrl.description":
+    "embed.author.url (URL http/https)",
+  "commands.embed.option.channel.description": "Salon cible où publier l'embed",
+  "commands.embed.option.color.description": "embed.color (hex: #5865F2)",
+  "commands.embed.option.content.description":
+    "Message texte hors embed (optionnel)",
+  "commands.embed.option.description.description": "embed.description",
+  "commands.embed.option.fieldInline.description":
+    "embed.fields[{index}].inline (true/false)",
+  "commands.embed.option.fieldName.description": "embed.fields[{index}].name",
+  "commands.embed.option.fieldValue.description": "embed.fields[{index}].value",
+  "commands.embed.option.footerIconUrl.description":
+    "embed.footer.iconURL (URL http/https)",
+  "commands.embed.option.footerText.description":
+    "embed.footer.text (requis pour footer.iconURL)",
+  "commands.embed.option.imageUrl.description":
+    "embed.image.url (URL http/https)",
+  "commands.embed.option.thumbnailUrl.description":
+    "embed.thumbnail.url (URL http/https)",
+  "commands.embed.option.timestamp.description":
+    "embed.timestamp (ajoute la date/heure actuelle)",
+  "commands.embed.option.title.description": "embed.title",
+  "commands.embed.option.url.description":
+    "embed.url (URL du titre, http/https)",
+  "commands.embed.sub.send.description": "Publier l'embed dans le salon choisi",
   "commands.hello.description":
     "Envoyer un message de salutation de Terryscord",
   "commands.hello.onlineMessage":
     "Bonjour depuis Terryscord. Le bot est en ligne.",
+  "commands.rolePickButton.choice.style.danger": "Danger",
+  "commands.rolePickButton.choice.style.primary": "Principal",
+  "commands.rolePickButton.choice.style.secondary": "Secondaire",
+  "commands.rolePickButton.choice.style.success": "Succès",
+  "commands.rolePickButton.description":
+    "Ajouter des boutons de sélection de rôle sur un message existant",
+  "commands.rolePickButton.option.channel.description":
+    "Salon contenant le message à modifier",
+  "commands.rolePickButton.option.emoji.description":
+    "Emoji optionnel du bouton (unicode ou format <:name:id>)",
+  "commands.rolePickButton.option.label.description":
+    "Texte affiché sur le bouton",
+  "commands.rolePickButton.option.messageId.description":
+    "ID du message cible à modifier",
+  "commands.rolePickButton.option.role.description":
+    "Rôle attribué lorsque le bouton est cliqué",
+  "commands.rolePickButton.option.style.description": "Style visuel du bouton",
+  "commands.rolePickButton.sub.add.description":
+    "Ajouter un Role Pick Button sur un message",
+  "commands.rolePickButton.sub.remove.description":
+    "Supprimer un Role Pick Button spécifique par rôle",
+  "commands.rolePickButton.sub.restore.description":
+    "Retirer tous les Role Pick Buttons d'un message",
   "common.disabled": "désactivé",
   "common.enabled": "activé",
   "common.notConfigured": "non configuré",
+  "embed.errors.adminRequired":
+    "Vous devez avoir la permission administrateur pour envoyer des embeds avec cette commande.",
+  "embed.errors.authorNameRequired":
+    "Vous devez renseigner `embed.author.name` si vous utilisez `embed.author.url` ou `embed.author.iconURL`.",
+  "embed.errors.channelNotSendable":
+    "Le salon sélectionné ne permet pas l'envoi de messages.",
+  "embed.errors.emptyEmbed":
+    "Aucune propriété d'embed n'a été fournie. Renseignez au moins un champ (title, description, fields, etc.).",
+  "embed.errors.fieldIncomplete":
+    "Le champ {index} doit inclure `name` et `value` ensemble.",
+  "embed.errors.footerTextRequired":
+    "Vous devez renseigner `embed.footer.text` si vous utilisez `embed.footer.iconURL`.",
+  "embed.errors.invalidColor":
+    "Couleur invalide. Utilisez un code hexadécimal sur 6 caractères (ex: #5865F2).",
+  "embed.errors.invalidUrl":
+    "URL invalide pour `{field}`. Utilisez une URL http/https valide.",
+  "embed.errors.sendFailed":
+    "Impossible d'envoyer l'embed dans ce salon. Vérifiez mes permissions et les paramètres fournis.",
+  "embed.errors.serverOnly":
+    "Cette commande peut uniquement être utilisée dans un serveur.",
+  "embed.errors.unsupportedSubcommand":
+    "Sous-commande embed non prise en charge.",
+  "embed.success.sent":
+    "Embed envoyé dans <#{channelId}>. [Ouvrir le message]({messageUrl})",
   "interaction.commandUnavailable":
     "Cette commande n'est pas disponible pour le moment.",
   "interaction.executionError":
     "Une erreur inattendue est survenue pendant le traitement de cette commande.",
+  "rolePickButton.errors.adminRequired":
+    "Vous devez avoir la permission administrateur pour gérer les Role Pick Buttons.",
+  "rolePickButton.errors.botMemberUnavailable":
+    "Impossible de charger mon membre bot sur ce serveur.",
+  "rolePickButton.errors.botMissingManageRoles":
+    "Je dois avoir la permission `Gérer les rôles` pour cette fonctionnalité.",
+  "rolePickButton.errors.buttonAlreadyExists":
+    "Un Role Pick Button pour ce rôle existe déjà sur ce message.",
+  "rolePickButton.errors.buttonNotFound":
+    "Aucun Role Pick Button correspondant n'a été trouvé sur ce message.",
+  "rolePickButton.errors.channelNotCompatible":
+    "Le salon sélectionné ne permet pas de récupérer/modifier un message compatible.",
+  "rolePickButton.errors.invalidMessageId":
+    "L'ID de message fourni est invalide.",
+  "rolePickButton.errors.maxComponentsReached":
+    "Impossible d'ajouter un bouton: la limite de composants (5 rangées x 5 boutons) est atteinte.",
+  "rolePickButton.errors.messageEditFailed":
+    "Échec de la mise à jour du message cible. Vérifiez que je peux encore le modifier.",
+  "rolePickButton.errors.messageNotEditable":
+    "Ce message ne peut pas être modifié par le bot.",
+  "rolePickButton.errors.messageNotFound":
+    "Message introuvable dans le salon sélectionné.",
+  "rolePickButton.errors.restoreNoButtons":
+    "Ce message ne contient aucun Role Pick Button à retirer.",
+  "rolePickButton.errors.roleAboveBot":
+    "Ce rôle est au-dessus de mon rôle le plus élevé. Je ne peux pas l'attribuer.",
+  "rolePickButton.errors.roleEveryone":
+    "Le rôle @everyone ne peut pas être utilisé pour un Role Pick Button.",
+  "rolePickButton.errors.roleManaged":
+    "Les rôles gérés/intégration ne peuvent pas être utilisés.",
+  "rolePickButton.errors.roleNotFound":
+    "Impossible de trouver le rôle sélectionné dans ce serveur.",
+  "rolePickButton.errors.serverOnly":
+    "Cette commande/fonction ne peut être utilisée que dans un serveur.",
+  "rolePickButton.errors.unsupportedComponentLayout":
+    "Ce message utilise un type de composant non pris en charge pour l'édition Role Pick Button.",
+  "rolePickButton.errors.unsupportedSubcommand":
+    "Sous-commande Role Pick Button non prise en charge.",
+  "rolePickButton.interaction.alreadyAssigned":
+    "Vous avez déjà le rôle <@&{roleId}>.",
+  "rolePickButton.interaction.assignFailed":
+    "Je n'ai pas pu attribuer ce rôle. Vérifiez mes permissions et la hiérarchie des rôles.",
+  "rolePickButton.interaction.assigned": "Rôle attribué: <@&{roleId}>",
+  "rolePickButton.interaction.invalidButton":
+    "Ce bouton Role Pick Button est invalide ou périmé.",
+  "rolePickButton.interaction.memberNotFound":
+    "Impossible de charger votre membre serveur.",
+  "rolePickButton.interaction.removed": "Rôle retiré: <@&{roleId}>",
+  "rolePickButton.interaction.toggleFailed":
+    "Je n'ai pas pu modifier ce rôle. Vérifiez mes permissions et la hiérarchie des rôles.",
+  "rolePickButton.success.added":
+    "Role Pick Button ajouté dans <#{channelId}> pour <@&{roleId}> (label: **{label}**).",
+  "rolePickButton.success.removed":
+    "Role Pick Button supprimé (éléments retirés: **{count}**).",
+  "rolePickButton.success.restored":
+    "Message restauré: tous les Role Pick Buttons ont été retirés (total: **{count}**).",
 
   "verification.audit.cleanupOrphaned":
     "Nettoyage d'un salon captcha orphelin de vérification",
