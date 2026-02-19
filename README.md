@@ -44,10 +44,15 @@ bun run dev:bot
 
 This project uses PostgreSQL with Prisma.
 
-1. Make sure you have a PostgreSQL database set up.
-2. Update your `apps/server/.env` file with your PostgreSQL connection details.
+1. Copy `packages/db/.env.example` to `packages/db/.env` and `apps/server/.env.example` to `apps/server/.env`.
+2. (Optional) Set `DATABASE_PORT` in both files if `5432` is already used on your machine.
+3. Start the database container:
 
-3. Apply the schema to your database:
+```bash
+bun run db:start
+```
+
+4. Apply the schema to your database:
 
 ```bash
 bun run db:push
