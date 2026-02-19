@@ -5,5 +5,10 @@ export const createDiscordClient = () =>
     allowedMentions: {
       repliedUser: false,
     },
-    intents: [GatewayIntentBits.Guilds],
+    intents: [
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMembers,
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.MessageContent,
+    ],
   });

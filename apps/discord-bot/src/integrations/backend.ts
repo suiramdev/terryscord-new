@@ -13,7 +13,7 @@ const createBackendClient = (baseUrl: string): BackendClient => {
     url: `${baseUrl}/rpc`,
   });
 
-  return createORPCClient(link) as BackendClient;
+  return createORPCClient(link) as unknown as BackendClient;
 };
 
 export const runBackendHealthCheck = async (): Promise<void> => {

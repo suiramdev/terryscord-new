@@ -12,6 +12,7 @@ export const env = createEnv({
   runtimeEnv: process.env,
   server: {
     BOT_DATABASE_HEALTHCHECK_ON_READY: booleanFlag,
+    BOT_DEBUG_CAPTCHA_DEVELOPER_ROLE_ID: z.string().min(1).optional(),
     BOT_RPC_HEALTHCHECK_ON_READY: booleanFlag,
     BOT_SERVER_RPC_URL: z.url().optional(),
     DISCORD_BOT_TOKEN: z.string().min(1),
