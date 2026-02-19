@@ -1,15 +1,13 @@
 import { env } from "@terryscord/env/bot";
-import {
-  MessageFlags,
-  PermissionFlagsBits,
-  SlashCommandBuilder,
-} from "discord.js";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type {
   ChatInputCommandInteraction,
   Guild,
   GuildMember,
 } from "discord.js";
 
+import { replyWithEmbed } from "@/discord/embeds";
+import type { BotEmbedTone } from "@/discord/embeds";
 import { triggerCaptchaVerificationForMember } from "@/discord/events/guild-member-add";
 import { logger } from "@/logger";
 
@@ -38,21 +36,17 @@ const createContextError = (message: string): ContextError => ({
 const replyEphemeral = async ({
   content,
   interaction,
+  tone = "error",
 }: {
   content: string;
   interaction: ChatInputCommandInteraction;
+  tone?: BotEmbedTone;
 }): Promise<void> => {
-  const payload = {
-    content,
-    flags: MessageFlags.Ephemeral as const,
-  };
-
-  if (interaction.deferred || interaction.replied) {
-    await interaction.followUp(payload);
-    return;
-  }
-
-  await interaction.reply(payload);
+  await replyWithEmbed({
+    interaction,
+    message: content,
+    tone,
+  });
 };
 
 const resolveGuildMember = async ({
@@ -238,6 +232,7 @@ export const debugCaptchaCommand: SlashCommand = {
     await replyEphemeral({
       content: `Started full captcha verification workflow for <@${context.targetMember.id}>.`,
       interaction,
+      tone: "debug",
     });
   },
 };

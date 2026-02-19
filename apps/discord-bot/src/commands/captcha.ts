@@ -1,7 +1,6 @@
 import { env } from "@terryscord/env/bot";
 import {
   ChannelType,
-  MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
@@ -13,6 +12,8 @@ import type {
   Role,
 } from "discord.js";
 
+import { replyWithEmbed } from "@/discord/embeds";
+import type { BotEmbedTone } from "@/discord/embeds";
 import { triggerCaptchaVerificationForMember } from "@/discord/events/guild-member-add";
 import {
   CAPTCHA_LIMITS,
@@ -72,21 +73,17 @@ type SubcommandHandler = (args: HandlerArgs) => Promise<void>;
 const replyEphemeral = async ({
   content,
   interaction,
+  tone = "error",
 }: {
   content: string;
   interaction: ChatInputCommandInteraction;
+  tone?: BotEmbedTone;
 }): Promise<void> => {
-  const payload = {
-    content,
-    flags: MessageFlags.Ephemeral as const,
-  };
-
-  if (interaction.deferred || interaction.replied) {
-    await interaction.followUp(payload);
-    return;
-  }
-
-  await interaction.reply(payload);
+  await replyWithEmbed({
+    interaction,
+    message: content,
+    tone,
+  });
 };
 
 const createCommandError = (message: string): CommandError => ({
@@ -173,6 +170,7 @@ const savePatchAndReply = async ({
   await replyEphemeral({
     content: successMessage,
     interaction,
+    tone: "success",
   });
 };
 
@@ -752,6 +750,7 @@ const handleShow = async ({
       storedExists: storedSettings !== null,
     }),
     interaction,
+    tone: "important",
   });
 };
 
@@ -811,6 +810,7 @@ const handleDebugRun = async ({
       ? `Started captcha verification workflow for <@${targetMember.id}>.`
       : "Could not start captcha verification because a session is already active for that member.",
     interaction,
+    tone: started ? "debug" : "error",
   });
 };
 

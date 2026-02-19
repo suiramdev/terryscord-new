@@ -1,23 +1,17 @@
-import { MessageFlags } from "discord.js";
 import type { ChatInputCommandInteraction, Interaction } from "discord.js";
 
 import type { SlashCommand } from "@/commands/types";
+import { replyWithEmbed } from "@/discord/embeds";
 import { logger } from "@/logger";
 
 const replyWithExecutionError = async (
   interaction: ChatInputCommandInteraction
 ): Promise<void> => {
-  const payload = {
-    content: "An unexpected error occurred while handling that command.",
-    flags: MessageFlags.Ephemeral as const,
-  };
-
-  if (interaction.deferred || interaction.replied) {
-    await interaction.followUp(payload);
-    return;
-  }
-
-  await interaction.reply(payload);
+  await replyWithEmbed({
+    interaction,
+    message: "An unexpected error occurred while handling that command.",
+    tone: "error",
+  });
 };
 
 const replyWithUnknownCommand = async (
@@ -34,9 +28,10 @@ const replyWithUnknownCommand = async (
     return;
   }
 
-  await interaction.reply({
-    content: "That command is not available right now.",
-    flags: MessageFlags.Ephemeral as const,
+  await replyWithEmbed({
+    interaction,
+    message: "That command is not available right now.",
+    tone: "info",
   });
 };
 
