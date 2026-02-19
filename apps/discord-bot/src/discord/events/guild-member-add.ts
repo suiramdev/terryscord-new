@@ -16,6 +16,7 @@ import type {
   TextChannel,
 } from "discord.js";
 
+import { t } from "@/i18n";
 import { getGuildCaptchaSettings } from "@/integrations/captcha-settings";
 import type { GuildCaptchaSettings } from "@/integrations/captcha-settings";
 import { logger } from "@/logger";
@@ -32,7 +33,7 @@ const CAPTCHA_BACKGROUND_COLOR_START = "#f8fafc";
 const CAPTCHA_BACKGROUND_COLOR_END = "#e2e8f0";
 const CAPTCHA_BACKGROUND_ACCENT_COLOR = "#94a3b8";
 const CHANNEL_DELETE_DELAY_MS = 2000;
-const CHANNEL_NAME_DEFAULT_PREFIX = "verify";
+const CHANNEL_NAME_DEFAULT_PREFIX = t("verification.channelName.prefix");
 const FALLBACK_CAPTCHA_CHARACTER = "A";
 const VERIFICATION_EMBED_COLOR_INFO = 2_484_063;
 const VERIFICATION_EMBED_COLOR_SUCCESS = 2_212_308;
@@ -193,7 +194,7 @@ const createCaptchaBackgroundBuffer = (noiseLevelRatio: number): Buffer => {
 const createVerificationEmbed = ({
   color,
   description,
-  title = "Verification",
+  title = t("verification.embed.defaultTitle"),
 }: {
   color: number;
   description: string;
@@ -244,7 +245,7 @@ const createCaptchaChallenge = async ({
   const imageBuffer = await captchaGenerator.generate();
   return {
     attachment: new AttachmentBuilder(imageBuffer, {
-      description: "Captcha challenge",
+      description: t("verification.image.description"),
       name: CAPTCHA_IMAGE_FILE_NAME,
     }),
     code,
@@ -416,8 +417,7 @@ const purgeStaleMemberChannels = async (member: GuildMember): Promise<void> => {
 
     await deleteChannelSafely({
       channel: guildChannel,
-      reason:
-        "Removing stale captcha verification channel before creating a new one",
+      reason: t("verification.audit.removeStaleBeforeCreate"),
     });
   }
 };
@@ -447,7 +447,10 @@ const createVerificationChannelAttempt = async ({
     }),
     parent: categoryId ?? undefined,
     permissionOverwrites,
-    reason: `Captcha verification (${source}) for ${member.user.tag}`,
+    reason: t("verification.audit.createReason", {
+      memberTag: member.user.tag,
+      source,
+    }),
     topic: buildVerificationChannelTopic(member.id),
     type: ChannelType.GuildText,
   });
@@ -557,8 +560,7 @@ const sendMissingVerifiedRoleMessage = async ({
       embeds: [
         createVerificationEmbed({
           color: VERIFICATION_EMBED_COLOR_WARNING,
-          description:
-            "Verification completed, but no verified role is configured. Ask an administrator to run `/captcha set verified-role`.",
+          description: t("verification.message.missingVerifiedRole"),
         }),
       ],
     },
@@ -576,8 +578,7 @@ const sendDeletedVerifiedRoleMessage = async ({
       embeds: [
         createVerificationEmbed({
           color: VERIFICATION_EMBED_COLOR_WARNING,
-          description:
-            "Verification completed, but the configured verified role no longer exists. Please contact an administrator.",
+          description: t("verification.message.deletedVerifiedRole"),
         }),
       ],
     },
@@ -596,17 +597,16 @@ const assignVerifiedRoleWithFeedback = async ({
   role: Role;
 }): Promise<void> => {
   try {
-    await member.roles.add(
-      role.id,
-      "Captcha verification completed successfully"
-    );
+    await member.roles.add(role.id, t("verification.audit.roleAddReason"));
     await sendChannelMessageSafely({
       channel,
       options: {
         embeds: [
           createVerificationEmbed({
             color: VERIFICATION_EMBED_COLOR_SUCCESS,
-            description: `Verification complete. You now have the <@&${role.id}> role.`,
+            description: t("verification.message.roleAssigned", {
+              roleId: role.id,
+            }),
           }),
         ],
       },
@@ -638,8 +638,7 @@ const assignVerifiedRoleWithFeedback = async ({
         embeds: [
           createVerificationEmbed({
             color: VERIFICATION_EMBED_COLOR_ERROR,
-            description:
-              "Verification completed, but I could not assign the configured role. Please contact an administrator.",
+            description: t("verification.message.roleAssignFailed"),
           }),
         ],
       },
@@ -734,14 +733,14 @@ const kickMemberSafely = async ({
 
 const resolveFailureMessage = (reason: string): string => {
   if (reason === "limit") {
-    return "Verification failed because you exceeded the maximum number of attempts.";
+    return t("verification.message.failureLimit");
   }
 
   if (reason === "time") {
-    return "Verification timed out before a correct captcha response was provided.";
+    return t("verification.message.failureTime");
   }
 
-  return "Verification ended before completion.";
+  return t("verification.message.failureDefault");
 };
 
 const handleFailedVerification = async ({
@@ -776,7 +775,10 @@ const handleFailedVerification = async ({
 
   await kickMemberSafely({
     member,
-    reason: `${failureMessage} Attempts used: ${attemptsUsed}.`,
+    reason: t("verification.audit.kickReason", {
+      attemptsUsed,
+      failureMessage,
+    }),
   });
 };
 
@@ -787,8 +789,8 @@ const buildVerificationPromptEmbed = ({
 }): EmbedBuilder =>
   createVerificationEmbed({
     color: VERIFICATION_EMBED_COLOR_INFO,
-    description: `Welcome <@${member.id}>. Complete verification below to access the server.`,
-    title: "Welcome",
+    description: t("verification.message.welcome", { memberId: member.id }),
+    title: t("verification.message.welcomeTitle"),
   }).setImage(`attachment://${CAPTCHA_IMAGE_FILE_NAME}`);
 
 const shouldDeleteOrphanedChannel = (
@@ -822,7 +824,7 @@ const cleanupOrphanedGuildChannels = async (guild: Guild): Promise<void> => {
 
     await deleteChannelSafely({
       channel: guildChannel,
-      reason: "Cleaning orphaned captcha verification channel",
+      reason: t("verification.audit.cleanupOrphaned"),
     });
   }
 };
@@ -862,7 +864,14 @@ const notifyIncorrectAttempt = async ({
       embeds: [
         createVerificationEmbed({
           color: VERIFICATION_EMBED_COLOR_WARNING,
-          description: `Incorrect response. ${attemptsRemaining} attempt${attemptsRemaining === 1 ? "" : "s"} remaining.`,
+          description:
+            attemptsRemaining === 1
+              ? t("verification.message.incorrectAttemptSingular", {
+                  attemptsRemaining,
+                })
+              : t("verification.message.incorrectAttemptPlural", {
+                  attemptsRemaining,
+                }),
         }),
       ],
     },
@@ -996,7 +1005,7 @@ const finalizeCaptchaChallenge = async ({
   await waitForMilliseconds(CHANNEL_DELETE_DELAY_MS);
   await deleteChannelSafely({
     channel,
-    reason: "Captcha verification complete",
+    reason: t("verification.audit.verificationComplete"),
   });
 };
 
@@ -1088,8 +1097,7 @@ const handleVerificationWorkflowError = async ({
       embeds: [
         createVerificationEmbed({
           color: VERIFICATION_EMBED_COLOR_ERROR,
-          description:
-            "Verification could not be completed due to an internal error. Please contact an administrator.",
+          description: t("verification.message.internalError"),
         }),
       ],
     },
@@ -1097,7 +1105,7 @@ const handleVerificationWorkflowError = async ({
   await waitForMilliseconds(CHANNEL_DELETE_DELAY_MS);
   await deleteChannelSafely({
     channel,
-    reason: "Captcha verification failed with internal error",
+    reason: t("verification.audit.internalError"),
   });
 };
 

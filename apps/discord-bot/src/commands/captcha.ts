@@ -15,6 +15,7 @@ import type {
 import { replyWithEmbed } from "@/discord/embeds";
 import type { BotEmbedTone } from "@/discord/embeds";
 import { triggerCaptchaVerificationForMember } from "@/discord/events/guild-member-add";
+import { t } from "@/i18n";
 import {
   CAPTCHA_LIMITS,
   CAPTCHA_TYPE_VALUES,
@@ -49,6 +50,29 @@ const RESET_OPTIONS = [
 ] as const;
 
 type ResetOption = (typeof RESET_OPTIONS)[number];
+
+const RESET_OPTION_LABEL_KEYS: Record<ResetOption, Parameters<typeof t>[0]> = {
+  all: "commands.captcha.resetChoice.all",
+  "allow-admin-access": "commands.captcha.resetChoice.allowAdminAccess",
+  "captcha-category": "commands.captcha.resetChoice.captchaCategory",
+  "captcha-type": "commands.captcha.resetChoice.captchaType",
+  "case-sensitive": "commands.captcha.resetChoice.caseSensitive",
+  "channel-name-format": "commands.captcha.resetChoice.channelNameFormat",
+  "code-length": "commands.captcha.resetChoice.codeLength",
+  "debug-logging": "commands.captcha.resetChoice.debugLogging",
+  "kick-on-failure": "commands.captcha.resetChoice.kickOnFailure",
+  "max-attempts": "commands.captcha.resetChoice.maxAttempts",
+  "noise-level": "commands.captcha.resetChoice.noiseLevel",
+  "timeout-seconds": "commands.captcha.resetChoice.timeoutSeconds",
+  "verified-role": "commands.captcha.resetChoice.verifiedRole",
+};
+
+const getInteractionLocale = (
+  interaction: ChatInputCommandInteraction
+): string | null => interaction.locale ?? interaction.guildLocale ?? null;
+
+const getResetOptionLabel = (option: ResetOption): string =>
+  t(RESET_OPTION_LABEL_KEYS[option]);
 
 interface CommandError {
   message: string;
@@ -106,21 +130,24 @@ const resolveBotMember = async (guild: Guild): Promise<GuildMember | null> => {
 const resolveAdminContext = async (
   interaction: ChatInputCommandInteraction
 ): Promise<AdminContextResult> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const { guild } = interaction;
   if (!guild) {
-    return createCommandError("This command can only be used inside a server.");
+    return createCommandError(
+      t("captcha.errors.serverOnly", undefined, preferredLocale)
+    );
   }
 
   if (!interaction.memberPermissions?.has(ADMINISTRATOR_PERMISSION)) {
     return createCommandError(
-      "You must have administrator permission to manage captcha settings."
+      t("captcha.errors.adminRequired", undefined, preferredLocale)
     );
   }
 
   const botMember = await resolveBotMember(guild);
   if (!botMember) {
     return createCommandError(
-      "I could not load my bot member data in this guild. Try again."
+      t("captcha.errors.botMemberUnavailable", undefined, preferredLocale)
     );
   }
 
@@ -159,9 +186,9 @@ const savePatchAndReply = async ({
 }): Promise<void> => {
   const saved = await savePatch({ guildId, patch });
   if (!saved) {
+    const preferredLocale = getInteractionLocale(interaction);
     await replyEphemeral({
-      content:
-        "Failed to save captcha settings. Check database connectivity and try again.",
+      content: t("captcha.errors.saveFailed", undefined, preferredLocale),
       interaction,
     });
     return;
@@ -177,22 +204,24 @@ const savePatchAndReply = async ({
 const validateRoleSelection = ({
   botMember,
   guild,
+  preferredLocale,
   role,
 }: {
   botMember: GuildMember;
   guild: Guild;
+  preferredLocale?: string | null;
   role: Role;
 }): string | null => {
   if (role.id === guild.roles.everyone.id) {
-    return "The @everyone role cannot be configured as the verified role.";
+    return t("captcha.errors.roleEveryone", undefined, preferredLocale);
   }
 
   if (role.managed) {
-    return "Managed/integration roles cannot be configured as the verified role.";
+    return t("captcha.errors.roleManaged", undefined, preferredLocale);
   }
 
   if (role.position >= botMember.roles.highest.position) {
-    return "That role is above my highest role, so I cannot assign it.";
+    return t("captcha.errors.roleAboveBot", undefined, preferredLocale);
   }
 
   return null;
@@ -214,10 +243,16 @@ const resolveRoleFromOption = ({
   return guild.roles.fetch(selectedRole.id);
 };
 
-const validateChannelNameFormat = (format: string): string | null => {
+const validateChannelNameFormat = ({
+  format,
+  preferredLocale,
+}: {
+  format: string;
+  preferredLocale?: string | null;
+}): string | null => {
   const trimmed = format.trim();
   if (trimmed.length < 3 || trimmed.length > 80) {
-    return "Channel name format must be between 3 and 80 characters.";
+    return t("captcha.errors.channelFormatLength", undefined, preferredLocale);
   }
 
   return null;
@@ -275,17 +310,27 @@ const resolveCategoryById = ({
 const validateCategoryBotPermissions = ({
   botMember,
   category,
+  preferredLocale,
 }: {
   botMember: GuildMember;
   category: CategoryChannel;
+  preferredLocale?: string | null;
 }): string | null => {
   const botPermissions = category.permissionsFor(botMember);
   if (!botPermissions?.has(PermissionFlagsBits.ViewChannel)) {
-    return "I must be able to view that category to create captcha channels in it.";
+    return t(
+      "captcha.errors.categoryViewPermission",
+      undefined,
+      preferredLocale
+    );
   }
 
   if (!botPermissions.has(PermissionFlagsBits.ManageChannels)) {
-    return "I need `Manage Channels` permission in that category to create captcha channels.";
+    return t(
+      "captcha.errors.categoryManagePermission",
+      undefined,
+      preferredLocale
+    );
   }
 
   return null;
@@ -303,6 +348,7 @@ const saveCategoryAndReply = async ({
   const permissionError = validateCategoryBotPermissions({
     botMember: context.botMember,
     category,
+    preferredLocale: getInteractionLocale(interaction),
   });
   if (permissionError) {
     await replyEphemeral({
@@ -318,42 +364,106 @@ const saveCategoryAndReply = async ({
     patch: {
       captchaCategoryId: category.id,
     },
-    successMessage: `Captcha category set to **${category.name}**.`,
+    successMessage: t(
+      "captcha.success.categorySet",
+      { categoryName: category.name },
+      getInteractionLocale(interaction)
+    ),
   });
 };
 
-const formatBoolean = (value: boolean): string =>
-  value ? "enabled" : "disabled";
+const formatBoolean = (
+  value: boolean,
+  preferredLocale?: string | null
+): string =>
+  t(value ? "common.enabled" : "common.disabled", undefined, preferredLocale);
 
-const formatOptionalValue = (value: string | null): string =>
-  value && value.length > 0 ? value : "not configured";
+const formatOptionalValue = (
+  value: string | null,
+  preferredLocale?: string | null
+): string =>
+  value && value.length > 0
+    ? value
+    : t("common.notConfigured", undefined, preferredLocale);
 
 const buildShowMessage = ({
+  preferredLocale,
   settings,
   storedExists,
 }: {
+  preferredLocale?: string | null;
   settings: GuildCaptchaSettings;
   storedExists: boolean;
 }): string => {
   const source = storedExists
-    ? "Database settings loaded (fallbacks still applied for invalid/missing values)."
-    : "No settings stored yet; hardcoded defaults are active.";
+    ? t("captcha.show.sourceStored", undefined, preferredLocale)
+    : t("captcha.show.sourceDefault", undefined, preferredLocale);
 
   return [
-    "Captcha settings:",
+    t("captcha.show.title", undefined, preferredLocale),
     source,
-    `Verified role: ${formatOptionalValue(settings.verifiedRoleId)}`,
-    `Captcha category: ${formatOptionalValue(settings.captchaCategoryId)}`,
-    `Max attempts: ${settings.maxAttempts}`,
-    `Timeout (seconds): ${settings.timeoutSeconds}`,
-    `Kick on failure: ${formatBoolean(settings.kickOnFailure)}`,
-    `Allow admin access: ${formatBoolean(settings.allowAdminAccess)}`,
-    `Channel name format: ${settings.channelNameFormat}`,
-    `Captcha type: ${settings.captchaType}`,
-    `Code length: ${settings.codeLength}`,
-    `Noise level: ${settings.captchaNoiseLevel}`,
-    `Case sensitive answers: ${formatBoolean(settings.captchaCaseSensitive)}`,
-    `Debug logging: ${formatBoolean(settings.debugLogging)}`,
+    t(
+      "captcha.show.verifiedRole",
+      { value: formatOptionalValue(settings.verifiedRoleId, preferredLocale) },
+      preferredLocale
+    ),
+    t(
+      "captcha.show.captchaCategory",
+      {
+        value: formatOptionalValue(settings.captchaCategoryId, preferredLocale),
+      },
+      preferredLocale
+    ),
+    t(
+      "captcha.show.maxAttempts",
+      { value: settings.maxAttempts },
+      preferredLocale
+    ),
+    t(
+      "captcha.show.timeoutSeconds",
+      { value: settings.timeoutSeconds },
+      preferredLocale
+    ),
+    t(
+      "captcha.show.kickOnFailure",
+      { value: formatBoolean(settings.kickOnFailure, preferredLocale) },
+      preferredLocale
+    ),
+    t(
+      "captcha.show.allowAdminAccess",
+      { value: formatBoolean(settings.allowAdminAccess, preferredLocale) },
+      preferredLocale
+    ),
+    t(
+      "captcha.show.channelNameFormat",
+      { value: settings.channelNameFormat },
+      preferredLocale
+    ),
+    t(
+      "captcha.show.captchaType",
+      { value: settings.captchaType },
+      preferredLocale
+    ),
+    t(
+      "captcha.show.codeLength",
+      { value: settings.codeLength },
+      preferredLocale
+    ),
+    t(
+      "captcha.show.noiseLevel",
+      { value: settings.captchaNoiseLevel },
+      preferredLocale
+    ),
+    t(
+      "captcha.show.caseSensitiveAnswers",
+      { value: formatBoolean(settings.captchaCaseSensitive, preferredLocale) },
+      preferredLocale
+    ),
+    t(
+      "captcha.show.debugLogging",
+      { value: formatBoolean(settings.debugLogging, preferredLocale) },
+      preferredLocale
+    ),
   ].join("\n");
 };
 
@@ -361,13 +471,18 @@ const handleSetVerifiedRole = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const role = await resolveRoleFromOption({
     guild: context.guild,
     interaction,
   });
   if (!role) {
     await replyEphemeral({
-      content: "The selected role could not be found.",
+      content: t(
+        "captcha.errors.selectedRoleNotFound",
+        undefined,
+        preferredLocale
+      ),
       interaction,
     });
     return;
@@ -376,6 +491,7 @@ const handleSetVerifiedRole = async ({
   const validationError = validateRoleSelection({
     botMember: context.botMember,
     guild: context.guild,
+    preferredLocale,
     role,
   });
   if (validationError) {
@@ -392,7 +508,11 @@ const handleSetVerifiedRole = async ({
     patch: {
       verifiedRoleId: role.id,
     },
-    successMessage: `Verified role set to <@&${role.id}>.`,
+    successMessage: t(
+      "captcha.success.verifiedRoleSet",
+      { roleId: role.id },
+      preferredLocale
+    ),
   });
 };
 
@@ -400,10 +520,15 @@ const handleSetCategory = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const selectedChannel = interaction.options.getChannel("category", true);
   if (selectedChannel.type !== ChannelType.GuildCategory) {
     await replyEphemeral({
-      content: "Selected channel must be a category.",
+      content: t(
+        "captcha.errors.selectedChannelNotCategory",
+        undefined,
+        preferredLocale
+      ),
       interaction,
     });
     return;
@@ -415,7 +540,11 @@ const handleSetCategory = async ({
   });
   if (!category) {
     await replyEphemeral({
-      content: "The selected category could not be resolved in this guild.",
+      content: t(
+        "captcha.errors.selectedCategoryNotResolved",
+        undefined,
+        preferredLocale
+      ),
       interaction,
     });
     return;
@@ -432,6 +561,7 @@ const handleSetCategoryById = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const categoryId = interaction.options.getString("category-id", true).trim();
   const category = await resolveCategoryById({
     categoryId,
@@ -439,8 +569,11 @@ const handleSetCategoryById = async ({
   });
   if (!category) {
     await replyEphemeral({
-      content:
-        "The provided category ID is invalid or does not belong to a category in this guild.",
+      content: t(
+        "captcha.errors.categoryIdInvalid",
+        undefined,
+        preferredLocale
+      ),
       interaction,
     });
     return;
@@ -457,13 +590,21 @@ const handleSetMaxAttempts = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const value = interaction.options.getInteger("value", true);
   if (
     value < CAPTCHA_LIMITS.maxAttempts.min ||
     value > CAPTCHA_LIMITS.maxAttempts.max
   ) {
     await replyEphemeral({
-      content: `Max attempts must be between ${CAPTCHA_LIMITS.maxAttempts.min} and ${CAPTCHA_LIMITS.maxAttempts.max}.`,
+      content: t(
+        "captcha.errors.maxAttemptsRange",
+        {
+          max: CAPTCHA_LIMITS.maxAttempts.max,
+          min: CAPTCHA_LIMITS.maxAttempts.min,
+        },
+        preferredLocale
+      ),
       interaction,
     });
     return;
@@ -475,7 +616,11 @@ const handleSetMaxAttempts = async ({
     patch: {
       maxAttempts: value,
     },
-    successMessage: `Max attempts set to **${value}**.`,
+    successMessage: t(
+      "captcha.success.maxAttemptsSet",
+      { value },
+      preferredLocale
+    ),
   });
 };
 
@@ -483,13 +628,21 @@ const handleSetTimeoutSeconds = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const value = interaction.options.getInteger("value", true);
   if (
     value < CAPTCHA_LIMITS.timeoutSeconds.min ||
     value > CAPTCHA_LIMITS.timeoutSeconds.max
   ) {
     await replyEphemeral({
-      content: `Timeout must be between ${CAPTCHA_LIMITS.timeoutSeconds.min} and ${CAPTCHA_LIMITS.timeoutSeconds.max} seconds.`,
+      content: t(
+        "captcha.errors.timeoutRange",
+        {
+          max: CAPTCHA_LIMITS.timeoutSeconds.max,
+          min: CAPTCHA_LIMITS.timeoutSeconds.min,
+        },
+        preferredLocale
+      ),
       interaction,
     });
     return;
@@ -501,7 +654,7 @@ const handleSetTimeoutSeconds = async ({
     patch: {
       timeoutSeconds: value,
     },
-    successMessage: `Timeout set to **${value}** seconds.`,
+    successMessage: t("captcha.success.timeoutSet", { value }, preferredLocale),
   });
 };
 
@@ -509,6 +662,7 @@ const handleSetKickOnFailure = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const enabled = interaction.options.getBoolean("enabled", true);
   await savePatchAndReply({
     guildId: context.guild.id,
@@ -516,7 +670,11 @@ const handleSetKickOnFailure = async ({
     patch: {
       kickOnFailure: enabled,
     },
-    successMessage: `Kick on failure ${formatBoolean(enabled)}.`,
+    successMessage: t(
+      "captcha.success.kickOnFailureSet",
+      { value: formatBoolean(enabled, preferredLocale) },
+      preferredLocale
+    ),
   });
 };
 
@@ -524,6 +682,7 @@ const handleSetAllowAdminAccess = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const enabled = interaction.options.getBoolean("enabled", true);
   await savePatchAndReply({
     guildId: context.guild.id,
@@ -531,7 +690,11 @@ const handleSetAllowAdminAccess = async ({
     patch: {
       allowAdminAccess: enabled,
     },
-    successMessage: `Admin access to captcha channels ${formatBoolean(enabled)}.`,
+    successMessage: t(
+      "captcha.success.adminAccessSet",
+      { value: formatBoolean(enabled, preferredLocale) },
+      preferredLocale
+    ),
   });
 };
 
@@ -539,8 +702,12 @@ const handleSetChannelNameFormat = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const format = interaction.options.getString("format", true);
-  const validationError = validateChannelNameFormat(format);
+  const validationError = validateChannelNameFormat({
+    format,
+    preferredLocale,
+  });
   if (validationError) {
     await replyEphemeral({
       content: validationError,
@@ -555,8 +722,11 @@ const handleSetChannelNameFormat = async ({
     patch: {
       channelNameFormat: format.trim(),
     },
-    successMessage:
-      "Channel name format updated. Supported placeholders: {username}, {userid}, {suffix}, {prefix}.",
+    successMessage: t(
+      "captcha.success.channelNameFormatUpdated",
+      undefined,
+      preferredLocale
+    ),
   });
 };
 
@@ -567,10 +737,15 @@ const handleSetCaptchaType = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const value = interaction.options.getString("type", true);
   if (!isSupportedCaptchaType(value)) {
     await replyEphemeral({
-      content: `Unsupported captcha type. Supported: ${CAPTCHA_TYPE_VALUES.join(", ")}.`,
+      content: t(
+        "captcha.errors.unsupportedCaptchaType",
+        { supported: CAPTCHA_TYPE_VALUES.join(", ") },
+        preferredLocale
+      ),
       interaction,
     });
     return;
@@ -582,7 +757,11 @@ const handleSetCaptchaType = async ({
     patch: {
       captchaType: value,
     },
-    successMessage: `Captcha type set to **${value}**.`,
+    successMessage: t(
+      "captcha.success.captchaTypeSet",
+      { value },
+      preferredLocale
+    ),
   });
 };
 
@@ -590,13 +769,21 @@ const handleSetCodeLength = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const value = interaction.options.getInteger("value", true);
   if (
     value < CAPTCHA_LIMITS.codeLength.min ||
     value > CAPTCHA_LIMITS.codeLength.max
   ) {
     await replyEphemeral({
-      content: `Code length must be between ${CAPTCHA_LIMITS.codeLength.min} and ${CAPTCHA_LIMITS.codeLength.max}.`,
+      content: t(
+        "captcha.errors.codeLengthRange",
+        {
+          max: CAPTCHA_LIMITS.codeLength.max,
+          min: CAPTCHA_LIMITS.codeLength.min,
+        },
+        preferredLocale
+      ),
       interaction,
     });
     return;
@@ -608,7 +795,11 @@ const handleSetCodeLength = async ({
     patch: {
       codeLength: value,
     },
-    successMessage: `Captcha code length set to **${value}**.`,
+    successMessage: t(
+      "captcha.success.codeLengthSet",
+      { value },
+      preferredLocale
+    ),
   });
 };
 
@@ -616,13 +807,21 @@ const handleSetNoiseLevel = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const value = interaction.options.getInteger("value", true);
   if (
     value < CAPTCHA_LIMITS.noiseLevel.min ||
     value > CAPTCHA_LIMITS.noiseLevel.max
   ) {
     await replyEphemeral({
-      content: `Noise level must be between ${CAPTCHA_LIMITS.noiseLevel.min} and ${CAPTCHA_LIMITS.noiseLevel.max}.`,
+      content: t(
+        "captcha.errors.noiseLevelRange",
+        {
+          max: CAPTCHA_LIMITS.noiseLevel.max,
+          min: CAPTCHA_LIMITS.noiseLevel.min,
+        },
+        preferredLocale
+      ),
       interaction,
     });
     return;
@@ -634,7 +833,11 @@ const handleSetNoiseLevel = async ({
     patch: {
       captchaNoiseLevel: value,
     },
-    successMessage: `Captcha noise level set to **${value}**.`,
+    successMessage: t(
+      "captcha.success.noiseLevelSet",
+      { value },
+      preferredLocale
+    ),
   });
 };
 
@@ -642,6 +845,7 @@ const handleSetCaseSensitive = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const enabled = interaction.options.getBoolean("enabled", true);
   await savePatchAndReply({
     guildId: context.guild.id,
@@ -649,7 +853,11 @@ const handleSetCaseSensitive = async ({
     patch: {
       captchaCaseSensitive: enabled,
     },
-    successMessage: `Captcha case-sensitive answer matching ${formatBoolean(enabled)}.`,
+    successMessage: t(
+      "captcha.success.caseSensitiveSet",
+      { value: formatBoolean(enabled, preferredLocale) },
+      preferredLocale
+    ),
   });
 };
 
@@ -657,6 +865,7 @@ const handleSetDebugLogging = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const enabled = interaction.options.getBoolean("enabled", true);
   await savePatchAndReply({
     guildId: context.guild.id,
@@ -664,7 +873,11 @@ const handleSetDebugLogging = async ({
     patch: {
       debugLogging: enabled,
     },
-    successMessage: `Captcha debug logging ${formatBoolean(enabled)}.`,
+    successMessage: t(
+      "captcha.success.debugLoggingSet",
+      { value: formatBoolean(enabled, preferredLocale) },
+      preferredLocale
+    ),
   });
 };
 
@@ -722,11 +935,16 @@ const runSetSubcommand = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const subcommand = interaction.options.getSubcommand(true);
   const handler = setSubcommandHandlers[subcommand];
   if (!handler) {
     await replyEphemeral({
-      content: "Unsupported captcha setting subcommand.",
+      content: t(
+        "captcha.errors.unsupportedSetSubcommand",
+        undefined,
+        preferredLocale
+      ),
       interaction,
     });
     return;
@@ -739,6 +957,7 @@ const handleShow = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const [effectiveSettings, storedSettings] = await Promise.all([
     getGuildCaptchaSettings(context.guild),
     getStoredGuildCaptchaSettings(context.guild.id),
@@ -746,6 +965,7 @@ const handleShow = async ({
 
   await replyEphemeral({
     content: buildShowMessage({
+      preferredLocale,
       settings: effectiveSettings,
       storedExists: storedSettings !== null,
     }),
@@ -773,33 +993,15 @@ const resolveGuildMemberById = async ({
   }
 };
 
-const handleDebugRun = async ({
-  context,
+const replyDebugRunResult = async ({
   interaction,
-}: HandlerArgs): Promise<void> => {
-  if (env.NODE_ENV !== "development") {
-    await replyEphemeral({
-      content:
-        "`/captcha debug-run` is disabled outside development mode to avoid accidental production use.",
-      interaction,
-    });
-    return;
-  }
-
-  const targetUser = interaction.options.getUser("member", true);
-  const targetMember = await resolveGuildMemberById({
-    guild: context.guild,
-    userId: targetUser.id,
-  });
-
-  if (!targetMember) {
-    await replyEphemeral({
-      content: "That user is not currently a member of this guild.",
-      interaction,
-    });
-    return;
-  }
-
+  preferredLocale,
+  targetMember,
+}: {
+  interaction: ChatInputCommandInteraction;
+  preferredLocale: string | null;
+  targetMember: GuildMember;
+}): Promise<void> => {
   const started = triggerCaptchaVerificationForMember({
     member: targetMember,
     source: "debug",
@@ -807,10 +1009,51 @@ const handleDebugRun = async ({
 
   await replyEphemeral({
     content: started
-      ? `Started captcha verification workflow for <@${targetMember.id}>.`
-      : "Could not start captcha verification because a session is already active for that member.",
+      ? t(
+          "captcha.success.debugRunStarted",
+          { memberId: targetMember.id },
+          preferredLocale
+        )
+      : t("captcha.success.workflowAlreadyActive", undefined, preferredLocale),
     interaction,
     tone: started ? "debug" : "error",
+  });
+};
+
+const handleDebugRun = async ({
+  context,
+  interaction,
+}: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
+  if (env.NODE_ENV !== "development") {
+    await replyEphemeral({
+      content: t("captcha.errors.debugRunDisabled", undefined, preferredLocale),
+      interaction,
+    });
+    return;
+  }
+
+  const targetMember = await resolveGuildMemberById({
+    guild: context.guild,
+    userId: interaction.options.getUser("member", true).id,
+  });
+
+  if (!targetMember) {
+    await replyEphemeral({
+      content: t(
+        "captcha.errors.userNotGuildMember",
+        undefined,
+        preferredLocale
+      ),
+      interaction,
+    });
+    return;
+  }
+
+  await replyDebugRunResult({
+    interaction,
+    preferredLocale,
+    targetMember,
   });
 };
 
@@ -818,6 +1061,7 @@ const handleReset = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const option = interaction.options.getString("option", true) as ResetOption;
   const patch = getResetPatch(option);
 
@@ -827,8 +1071,12 @@ const handleReset = async ({
     patch,
     successMessage:
       option === "all"
-        ? "All captcha settings were reset to fallback defaults."
-        : `Captcha setting **${option}** was reset to fallback default behavior.`,
+        ? t("captcha.success.resetAll", undefined, preferredLocale)
+        : t(
+            "captcha.success.resetSingle",
+            { option: getResetOptionLabel(option) },
+            preferredLocale
+          ),
   });
 };
 
@@ -842,11 +1090,16 @@ const runTopLevelSubcommand = async ({
   context,
   interaction,
 }: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
   const subcommand = interaction.options.getSubcommand(true);
   const handler = topLevelSubcommandHandlers[subcommand];
   if (!handler) {
     await replyEphemeral({
-      content: "Unsupported captcha subcommand.",
+      content: t(
+        "captcha.errors.unsupportedSubcommand",
+        undefined,
+        preferredLocale
+      ),
       interaction,
     });
     return;
@@ -858,32 +1111,34 @@ const runTopLevelSubcommand = async ({
 export const captchaCommand: SlashCommand = {
   data: new SlashCommandBuilder()
     .setName("captcha")
-    .setDescription("Manage captcha verification settings")
+    .setDescription(t("commands.captcha.description"))
     .setDMPermission(false)
     .setDefaultMemberPermissions(ADMINISTRATOR_PERMISSION)
     .addSubcommandGroup((group) =>
       group
         .setName(SET_GROUP_NAME)
-        .setDescription("Set captcha configuration options")
+        .setDescription(t("commands.captcha.groupSet.description"))
         .addSubcommand((subcommand) =>
           subcommand
             .setName("verified-role")
-            .setDescription("Set role assigned after captcha success")
+            .setDescription(t("commands.captcha.sub.verifiedRole.description"))
             .addRoleOption((option) =>
               option
                 .setName("role")
-                .setDescription("Role to assign")
+                .setDescription(t("commands.captcha.option.role.description"))
                 .setRequired(true)
             )
         )
         .addSubcommand((subcommand) =>
           subcommand
             .setName("captcha-category")
-            .setDescription("Set category used for captcha channels")
+            .setDescription(t("commands.captcha.sub.category.description"))
             .addChannelOption((option) =>
               option
                 .setName("category")
-                .setDescription("Category for temporary captcha channels")
+                .setDescription(
+                  t("commands.captcha.option.category.description")
+                )
                 .addChannelTypes(ChannelType.GuildCategory)
                 .setRequired(true)
             )
@@ -891,22 +1146,26 @@ export const captchaCommand: SlashCommand = {
         .addSubcommand((subcommand) =>
           subcommand
             .setName("captcha-category-id")
-            .setDescription("Set category using a raw category channel ID")
+            .setDescription(t("commands.captcha.sub.categoryById.description"))
             .addStringOption((option) =>
               option
                 .setName("category-id")
-                .setDescription("Category channel ID")
+                .setDescription(
+                  t("commands.captcha.option.categoryId.description")
+                )
                 .setRequired(true)
             )
         )
         .addSubcommand((subcommand) =>
           subcommand
             .setName("max-attempts")
-            .setDescription("Set maximum captcha attempts")
+            .setDescription(t("commands.captcha.sub.maxAttempts.description"))
             .addIntegerOption((option) =>
               option
                 .setName("value")
-                .setDescription("Maximum attempts")
+                .setDescription(
+                  t("commands.captcha.option.maxAttemptsValue.description")
+                )
                 .setMinValue(CAPTCHA_LIMITS.maxAttempts.min)
                 .setMaxValue(CAPTCHA_LIMITS.maxAttempts.max)
                 .setRequired(true)
@@ -915,11 +1174,13 @@ export const captchaCommand: SlashCommand = {
         .addSubcommand((subcommand) =>
           subcommand
             .setName("timeout-seconds")
-            .setDescription("Set captcha timeout in seconds")
+            .setDescription(t("commands.captcha.sub.timeout.description"))
             .addIntegerOption((option) =>
               option
                 .setName("value")
-                .setDescription("Timeout in seconds")
+                .setDescription(
+                  t("commands.captcha.option.timeoutValue.description")
+                )
                 .setMinValue(CAPTCHA_LIMITS.timeoutSeconds.min)
                 .setMaxValue(CAPTCHA_LIMITS.timeoutSeconds.max)
                 .setRequired(true)
@@ -928,11 +1189,13 @@ export const captchaCommand: SlashCommand = {
         .addSubcommand((subcommand) =>
           subcommand
             .setName("kick-on-failure")
-            .setDescription("Toggle kicking users who fail verification")
+            .setDescription(t("commands.captcha.sub.kickOnFailure.description"))
             .addBooleanOption((option) =>
               option
                 .setName("enabled")
-                .setDescription("Enable or disable kick on failure")
+                .setDescription(
+                  t("commands.captcha.option.enabledKick.description")
+                )
                 .setRequired(true)
             )
         )
@@ -940,34 +1203,38 @@ export const captchaCommand: SlashCommand = {
           subcommand
             .setName("allow-admin-access")
             .setDescription(
-              "Toggle administrator visibility of captcha channels"
+              t("commands.captcha.sub.allowAdminAccess.description")
             )
             .addBooleanOption((option) =>
               option
                 .setName("enabled")
-                .setDescription("Enable or disable admin access")
+                .setDescription(
+                  t("commands.captcha.option.enabledAdminAccess.description")
+                )
                 .setRequired(true)
             )
         )
         .addSubcommand((subcommand) =>
           subcommand
             .setName("channel-name-format")
-            .setDescription("Set temporary captcha channel naming format")
+            .setDescription(
+              t("commands.captcha.sub.channelNameFormat.description")
+            )
             .addStringOption((option) =>
               option
                 .setName("format")
-                .setDescription("Use {username}, {userid}, {suffix}, {prefix}")
+                .setDescription(t("commands.captcha.option.format.description"))
                 .setRequired(true)
             )
         )
         .addSubcommand((subcommand) =>
           subcommand
             .setName("captcha-type")
-            .setDescription("Set captcha challenge type")
+            .setDescription(t("commands.captcha.sub.captchaType.description"))
             .addStringOption((option) =>
               option
                 .setName("type")
-                .setDescription("Captcha type")
+                .setDescription(t("commands.captcha.option.type.description"))
                 .addChoices(
                   ...CAPTCHA_TYPE_VALUES.map((value) => ({
                     name: value,
@@ -980,11 +1247,13 @@ export const captchaCommand: SlashCommand = {
         .addSubcommand((subcommand) =>
           subcommand
             .setName("code-length")
-            .setDescription("Set captcha code length")
+            .setDescription(t("commands.captcha.sub.codeLength.description"))
             .addIntegerOption((option) =>
               option
                 .setName("value")
-                .setDescription("Captcha code length")
+                .setDescription(
+                  t("commands.captcha.option.codeLengthValue.description")
+                )
                 .setMinValue(CAPTCHA_LIMITS.codeLength.min)
                 .setMaxValue(CAPTCHA_LIMITS.codeLength.max)
                 .setRequired(true)
@@ -993,11 +1262,13 @@ export const captchaCommand: SlashCommand = {
         .addSubcommand((subcommand) =>
           subcommand
             .setName("noise-level")
-            .setDescription("Set captcha noise level for decoys and traces")
+            .setDescription(t("commands.captcha.sub.noiseLevel.description"))
             .addIntegerOption((option) =>
               option
                 .setName("value")
-                .setDescription("Noise level from 0 (none) to 100 (high)")
+                .setDescription(
+                  t("commands.captcha.option.noiseLevelValue.description")
+                )
                 .setMinValue(CAPTCHA_LIMITS.noiseLevel.min)
                 .setMaxValue(CAPTCHA_LIMITS.noiseLevel.max)
                 .setRequired(true)
@@ -1006,22 +1277,26 @@ export const captchaCommand: SlashCommand = {
         .addSubcommand((subcommand) =>
           subcommand
             .setName("case-sensitive")
-            .setDescription("Toggle case-sensitive captcha answer matching")
+            .setDescription(t("commands.captcha.sub.caseSensitive.description"))
             .addBooleanOption((option) =>
               option
                 .setName("enabled")
-                .setDescription("Enable or disable case-sensitive matching")
+                .setDescription(
+                  t("commands.captcha.option.enabledCaseSensitive.description")
+                )
                 .setRequired(true)
             )
         )
         .addSubcommand((subcommand) =>
           subcommand
             .setName("debug-logging")
-            .setDescription("Toggle captcha debug logs")
+            .setDescription(t("commands.captcha.sub.debugLogging.description"))
             .addBooleanOption((option) =>
               option
                 .setName("enabled")
-                .setDescription("Enable or disable debug logs")
+                .setDescription(
+                  t("commands.captcha.option.enabledDebugLogging.description")
+                )
                 .setRequired(true)
             )
         )
@@ -1029,34 +1304,32 @@ export const captchaCommand: SlashCommand = {
     .addSubcommand((subcommand) =>
       subcommand
         .setName("show")
-        .setDescription("Show effective captcha settings for this guild")
+        .setDescription(t("commands.captcha.sub.show.description"))
     )
     .addSubcommand((subcommand) =>
       subcommand
         .setName("debug-run")
-        .setDescription(
-          "Development-only: trigger captcha flow for an existing member"
-        )
+        .setDescription(t("commands.captcha.sub.debugRun.description"))
         .addUserOption((option) =>
           option
             .setName("member")
-            .setDescription("Member to run captcha verification for")
+            .setDescription(t("commands.captcha.option.member.description"))
             .setRequired(true)
         )
     )
     .addSubcommand((subcommand) =>
       subcommand
         .setName("reset")
-        .setDescription(
-          "Reset one or more captcha settings to fallback defaults"
-        )
+        .setDescription(t("commands.captcha.sub.reset.description"))
         .addStringOption((option) =>
           option
             .setName("option")
-            .setDescription("Setting to reset")
+            .setDescription(
+              t("commands.captcha.option.resetSetting.description")
+            )
             .addChoices(
               ...RESET_OPTIONS.map((value) => ({
-                name: value,
+                name: getResetOptionLabel(value),
                 value,
               }))
             )

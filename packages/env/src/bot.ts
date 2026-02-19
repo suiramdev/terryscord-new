@@ -14,6 +14,7 @@ export const env = createEnv({
     BOT_DATABASE_HEALTHCHECK_ON_READY: booleanFlag,
     BOT_RPC_HEALTHCHECK_ON_READY: booleanFlag,
     BOT_SERVER_RPC_URL: z.url().optional(),
+    DISCORD_BOT_LOCALE: z.enum(["fr"]).default("fr"),
     DISCORD_BOT_TOKEN: z.string().min(1),
     DISCORD_CLIENT_ID: z.string().min(1),
     DISCORD_GUILD_ID: z.string().min(1).optional(),

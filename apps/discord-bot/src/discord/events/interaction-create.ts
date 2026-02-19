@@ -2,6 +2,7 @@ import type { ChatInputCommandInteraction, Interaction } from "discord.js";
 
 import type { SlashCommand } from "@/commands/types";
 import { replyWithEmbed } from "@/discord/embeds";
+import { t } from "@/i18n";
 import { logger } from "@/logger";
 
 const replyWithExecutionError = async (
@@ -9,7 +10,7 @@ const replyWithExecutionError = async (
 ): Promise<void> => {
   await replyWithEmbed({
     interaction,
-    message: "An unexpected error occurred while handling that command.",
+    message: t("interaction.executionError", undefined, interaction.locale),
     tone: "error",
   });
 };
@@ -30,7 +31,7 @@ const replyWithUnknownCommand = async (
 
   await replyWithEmbed({
     interaction,
-    message: "That command is not available right now.",
+    message: t("interaction.commandUnavailable", undefined, interaction.locale),
     tone: "info",
   });
 };
