@@ -223,12 +223,13 @@ export const frTranslations = {
     "Verification echouee car vous avez depasse le nombre maximal d'essais.",
   "verification.message.failureTime":
     "Verification expiree avant qu'une reponse captcha correcte ne soit fournie.",
-  "verification.message.incorrectAttemptRegenerated":
-    "Reponse incorrecte. Un nouveau captcha a ete genere.",
   "verification.message.internalError":
     "La verification n'a pas pu etre terminee a cause d'une erreur interne. Merci de contacter un administrateur.",
   "verification.message.missingVerifiedRole":
     "Verification terminee, mais aucun role verifie n'est configure. Demandez a un administrateur d'executer `/captcha set verified-role`.",
+  "verification.message.retryPrompt":
+    "Reponse incorrecte <@{memberId}>. Voici un nouveau captcha a resoudre.",
+  "verification.message.retryTitle": "Nouvelle tentative",
   "verification.message.roleAssignFailed":
     "Verification terminee, mais je n'ai pas pu attribuer le role configure. Merci de contacter un administrateur.",
   "verification.message.roleAssigned":

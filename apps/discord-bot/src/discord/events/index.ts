@@ -7,6 +7,7 @@ import { logger } from "@/logger";
 import {
   cleanupOrphanedVerificationChannels,
   handleGuildMemberAdd,
+  recoverPendingVerificationSessions,
 } from "./guild-member-add";
 import { handleInteractionCreate } from "./interaction-create";
 import { handleReady } from "./ready";
@@ -23,6 +24,7 @@ export const registerEventHandlers = ({
   client.once(Events.ClientReady, async (readyClient) => {
     try {
       await handleReady(readyClient, onReady);
+      await recoverPendingVerificationSessions(readyClient);
       await cleanupOrphanedVerificationChannels(readyClient);
     } catch (error: unknown) {
       logger.error({ err: error }, "Ready handler failed");

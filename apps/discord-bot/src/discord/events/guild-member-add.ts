@@ -60,7 +60,12 @@ interface GeneratedCaptchaChallenge {
   code: string;
 }
 
-type VerificationSource = "debug" | "guildMemberAdd";
+interface CollectedCaptchaEntry {
+  content: string;
+  id: string;
+}
+
+type VerificationSource = "debug" | "guildMemberAdd" | "recovery";
 interface CaptchaCanvasModule {
   CaptchaGenerator: typeof CaptchaGeneratorType;
 }
@@ -786,13 +791,19 @@ const handleFailedVerification = async ({
 
 const buildVerificationPromptEmbed = ({
   member,
+  retryAfterFailure,
 }: {
   member: GuildMember;
+  retryAfterFailure: boolean;
 }): EmbedBuilder =>
   createVerificationEmbed({
     color: VERIFICATION_EMBED_COLOR_INFO,
-    description: t("verification.message.welcome", { memberId: member.id }),
-    title: t("verification.message.welcomeTitle"),
+    description: retryAfterFailure
+      ? t("verification.message.retryPrompt", { memberId: member.id })
+      : t("verification.message.welcome", { memberId: member.id }),
+    title: retryAfterFailure
+      ? t("verification.message.retryTitle")
+      : t("verification.message.welcomeTitle"),
   }).setImage(`attachment://${CAPTCHA_IMAGE_FILE_NAME}`);
 
 const shouldDeleteOrphanedChannel = (
@@ -847,24 +858,6 @@ const createCaptchaChallengeState = ({
   }),
   verified: false,
 });
-
-const notifyIncorrectAttempt = async ({
-  channel,
-}: {
-  channel: TextChannel;
-}): Promise<void> => {
-  await sendChannelMessageSafely({
-    channel,
-    options: {
-      embeds: [
-        createVerificationEmbed({
-          color: VERIFICATION_EMBED_COLOR_WARNING,
-          description: t("verification.message.incorrectAttemptRegenerated"),
-        }),
-      ],
-    },
-  });
-};
 
 const resolveAttemptAlertChannel = async ({
   channelId,
@@ -1079,13 +1072,16 @@ const sendCaptchaChallenge = async ({
   captchaAttachment,
   channel,
   member,
+  retryAfterFailure,
 }: {
   captchaAttachment: AttachmentBuilder;
   channel: TextChannel;
   member: GuildMember;
+  retryAfterFailure: boolean;
 }): Promise<string | null> => {
   const embed = buildVerificationPromptEmbed({
     member,
+    retryAfterFailure,
   });
 
   try {
@@ -1128,15 +1124,41 @@ const deleteMessageSafely = async ({
   }
 };
 
+const deleteFailedAndPreviousChallengeMessages = async ({
+  channel,
+  failedMessageId,
+  previousMessageId,
+}: {
+  channel: TextChannel;
+  failedMessageId: string;
+  previousMessageId: string | null;
+}): Promise<void> => {
+  await deleteMessageSafely({
+    channel,
+    messageId: failedMessageId,
+  });
+
+  if (!previousMessageId) {
+    return;
+  }
+
+  await deleteMessageSafely({
+    channel,
+    messageId: previousMessageId,
+  });
+};
+
 const rotateCaptchaChallenge = async ({
   channel,
   debugEnabled,
+  failedMessageId,
   member,
   settings,
   state,
 }: {
   channel: TextChannel;
   debugEnabled: boolean;
+  failedMessageId: string;
   member: GuildMember;
   settings: GuildCaptchaSettings;
   state: CaptchaChallengeState;
@@ -1144,29 +1166,28 @@ const rotateCaptchaChallenge = async ({
   const rotatedChallenge = await createCaptchaChallenge({
     settings,
   });
+  const previousMessageId = state.challengeMessageId;
+  await deleteFailedAndPreviousChallengeMessages({
+    channel,
+    failedMessageId,
+    previousMessageId,
+  });
+
   const nextChallengeMessageId = await sendCaptchaChallenge({
     captchaAttachment: rotatedChallenge.attachment,
     channel,
     member,
+    retryAfterFailure: true,
   });
-
   if (!nextChallengeMessageId) {
     return;
   }
 
-  const previousMessageId = state.challengeMessageId;
   state.challengeMessageId = nextChallengeMessageId;
   state.expectedResponse = normalizeCaptchaInput({
     caseSensitive: settings.captchaCaseSensitive,
     input: rotatedChallenge.code,
   });
-
-  if (previousMessageId) {
-    await deleteMessageSafely({
-      channel,
-      messageId: previousMessageId,
-    });
-  }
 
   logCaptchaDebug({
     debugEnabled,
@@ -1181,6 +1202,7 @@ const rotateCaptchaChallenge = async ({
 };
 
 const handleCaptchaResponse = async ({
+  collectedMessageId,
   channel,
   collector,
   debugEnabled,
@@ -1189,6 +1211,7 @@ const handleCaptchaResponse = async ({
   settings,
   state,
 }: {
+  collectedMessageId: string;
   channel: TextChannel;
   collector: ReturnType<TextChannel["createMessageCollector"]>;
   debugEnabled: boolean;
@@ -1210,10 +1233,6 @@ const handleCaptchaResponse = async ({
 
   state.attemptsUsed += 1;
 
-  await notifyIncorrectAttempt({
-    channel,
-  });
-
   await notifyAttemptThresholdReached({
     attemptsUsed: state.attemptsUsed,
     channel,
@@ -1226,6 +1245,7 @@ const handleCaptchaResponse = async ({
   await rotateCaptchaChallenge({
     channel,
     debugEnabled,
+    failedMessageId: collectedMessageId,
     member,
     settings,
     state,
@@ -1319,6 +1339,7 @@ const initializeCaptchaChallengeState = async ({
     captchaAttachment: captchaChallenge.attachment,
     channel,
     member,
+    retryAfterFailure: false,
   });
   if (!initialChallengeMessageId) {
     throw new Error("Unable to send initial captcha challenge message.");
@@ -1329,6 +1350,7 @@ const initializeCaptchaChallengeState = async ({
 };
 
 const processCaptchaMessageSafely = async ({
+  collectedMessage,
   channel,
   collector,
   debugEnabled,
@@ -1337,6 +1359,7 @@ const processCaptchaMessageSafely = async ({
   settings,
   state,
 }: {
+  collectedMessage: CollectedCaptchaEntry;
   channel: TextChannel;
   collector: ReturnType<TextChannel["createMessageCollector"]>;
   debugEnabled: boolean;
@@ -1348,6 +1371,7 @@ const processCaptchaMessageSafely = async ({
   try {
     await handleCaptchaResponse({
       channel,
+      collectedMessageId: collectedMessage.id,
       collector,
       debugEnabled,
       member,
@@ -1382,7 +1406,7 @@ const processQueuedCaptchaMessages = async ({
   collector: ReturnType<TextChannel["createMessageCollector"]>;
   debugEnabled: boolean;
   member: GuildMember;
-  queuedMessages: string[];
+  queuedMessages: CollectedCaptchaEntry[];
   settings: GuildCaptchaSettings;
   state: CaptchaChallengeState;
   setIsProcessing: (value: boolean) => void;
@@ -1390,17 +1414,18 @@ const processQueuedCaptchaMessages = async ({
   setIsProcessing(true);
 
   while (queuedMessages.length > 0) {
-    const messageContent = queuedMessages.shift();
-    if (!messageContent || collector.ended || state.verified) {
+    const collectedMessage = queuedMessages.shift();
+    if (!collectedMessage || collector.ended || state.verified) {
       continue;
     }
 
     await processCaptchaMessageSafely({
       channel,
+      collectedMessage,
       collector,
       debugEnabled,
       member,
-      messageContent,
+      messageContent: collectedMessage.content,
       settings,
       state,
     });
@@ -1426,7 +1451,7 @@ const waitForCaptchaQueueToDrain = async ({
   queuedMessages,
 }: {
   getIsProcessing: () => boolean;
-  queuedMessages: string[];
+  queuedMessages: CollectedCaptchaEntry[];
 }): Promise<void> => {
   while (getIsProcessing() || queuedMessages.length > 0) {
     await waitForMilliseconds(50);
@@ -1456,10 +1481,13 @@ const runCaptchaChallenge = async ({
     member,
     settings,
   });
-  const queuedMessages: string[] = [];
+  const queuedMessages: CollectedCaptchaEntry[] = [];
   let isProcessingQueue = false;
   collector.on("collect", async (message) => {
-    queuedMessages.push(message.content);
+    queuedMessages.push({
+      content: message.content,
+      id: message.id,
+    });
     if (isProcessingQueue) {
       return;
     }
@@ -1663,6 +1691,110 @@ const startCaptchaVerificationSession = ({
   return true;
 };
 
+const resolveVerificationMemberIdFromChannel = (
+  channel: GuildBasedChannel
+): string | null => {
+  if (channel.type !== ChannelType.GuildText) {
+    return null;
+  }
+
+  return parseVerificationChannelTopic(channel.topic);
+};
+
+const collectPendingVerificationMemberIds = (guild: Guild): string[] => {
+  const pendingMemberIds = new Set<string>();
+
+  for (const guildChannel of guild.channels.cache.values()) {
+    const pendingMemberId =
+      resolveVerificationMemberIdFromChannel(guildChannel);
+    if (pendingMemberId) {
+      pendingMemberIds.add(pendingMemberId);
+    }
+  }
+
+  return [...pendingMemberIds];
+};
+
+const resolveGuildMemberForRecovery = async ({
+  guild,
+  memberId,
+}: {
+  guild: Guild;
+  memberId: string;
+}): Promise<GuildMember | null> => {
+  const cachedMember = guild.members.cache.get(memberId);
+  if (cachedMember) {
+    return cachedMember;
+  }
+
+  try {
+    return await guild.members.fetch(memberId);
+  } catch {
+    return null;
+  }
+};
+
+const isMemberStillUnverified = ({
+  member,
+  settings,
+}: {
+  member: GuildMember;
+  settings: GuildCaptchaSettings;
+}): boolean => {
+  if (!settings.verifiedRoleId) {
+    return true;
+  }
+
+  return !member.roles.cache.has(settings.verifiedRoleId);
+};
+
+const recoverPendingVerificationForMember = async ({
+  guild,
+  memberId,
+  settings,
+}: {
+  guild: Guild;
+  memberId: string;
+  settings: GuildCaptchaSettings;
+}): Promise<void> => {
+  const member = await resolveGuildMemberForRecovery({
+    guild,
+    memberId,
+  });
+  if (!member) {
+    return;
+  }
+
+  if (!isMemberStillUnverified({ member, settings })) {
+    return;
+  }
+
+  startCaptchaVerificationSession({
+    member,
+    source: "recovery",
+  });
+};
+
+const recoverPendingVerificationForGuild = async (
+  guild: Guild
+): Promise<void> => {
+  await guild.channels.fetch();
+
+  const pendingMemberIds = collectPendingVerificationMemberIds(guild);
+  if (pendingMemberIds.length === 0) {
+    return;
+  }
+
+  const settings = await getGuildCaptchaSettings(guild);
+  for (const pendingMemberId of pendingMemberIds) {
+    await recoverPendingVerificationForMember({
+      guild,
+      memberId: pendingMemberId,
+      settings,
+    });
+  }
+};
+
 export const cleanupOrphanedVerificationChannels = async (
   client: Client<true>
 ): Promise<void> => {
@@ -1676,6 +1808,24 @@ export const cleanupOrphanedVerificationChannels = async (
           guildId: guild.id,
         },
         "Failed to clean orphaned captcha channels for guild"
+      );
+    }
+  }
+};
+
+export const recoverPendingVerificationSessions = async (
+  client: Client<true>
+): Promise<void> => {
+  for (const guild of client.guilds.cache.values()) {
+    try {
+      await recoverPendingVerificationForGuild(guild);
+    } catch (error: unknown) {
+      logger.warn(
+        {
+          err: error,
+          guildId: guild.id,
+        },
+        "Failed to recover pending captcha verification sessions for guild"
       );
     }
   }
