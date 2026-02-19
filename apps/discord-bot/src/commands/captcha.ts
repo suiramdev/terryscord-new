@@ -10,6 +10,7 @@ import type {
   Guild,
   GuildMember,
   Role,
+  TextChannel,
 } from "discord.js";
 
 import { replyWithEmbed } from "@/discord/embeds";
@@ -34,6 +35,7 @@ const ADMINISTRATOR_PERMISSION = PermissionFlagsBits.Administrator;
 const SET_GROUP_NAME = "set";
 
 const RESET_OPTIONS = [
+  "attempt-alert-channel",
   "verified-role",
   "captcha-category",
   "max-attempts",
@@ -54,6 +56,7 @@ type ResetOption = (typeof RESET_OPTIONS)[number];
 const RESET_OPTION_LABEL_KEYS: Record<ResetOption, Parameters<typeof t>[0]> = {
   all: "commands.captcha.resetChoice.all",
   "allow-admin-access": "commands.captcha.resetChoice.allowAdminAccess",
+  "attempt-alert-channel": "commands.captcha.resetChoice.attemptAlertChannel",
   "captcha-category": "commands.captcha.resetChoice.captchaCategory",
   "captcha-type": "commands.captcha.resetChoice.captchaType",
   "case-sensitive": "commands.captcha.resetChoice.caseSensitive",
@@ -307,6 +310,30 @@ const resolveCategoryById = ({
   return resolveFetchedCategoryById({ categoryId, guild });
 };
 
+const resolveTextChannelById = async ({
+  channelId,
+  guild,
+}: {
+  channelId: string;
+  guild: Guild;
+}): Promise<TextChannel | null> => {
+  const cachedChannel = guild.channels.cache.get(channelId);
+  if (cachedChannel?.type === ChannelType.GuildText) {
+    return cachedChannel;
+  }
+
+  try {
+    const fetchedChannel = await guild.channels.fetch(channelId);
+    if (!fetchedChannel || fetchedChannel.type !== ChannelType.GuildText) {
+      return null;
+    }
+
+    return fetchedChannel;
+  } catch {
+    return null;
+  }
+};
+
 const validateCategoryBotPermissions = ({
   botMember,
   category,
@@ -386,6 +413,14 @@ const formatOptionalValue = (
     ? value
     : t("common.notConfigured", undefined, preferredLocale);
 
+const formatOptionalChannelMention = (
+  channelId: string | null,
+  preferredLocale?: string | null
+): string =>
+  channelId && channelId.length > 0
+    ? `<#${channelId}>`
+    : t("common.notConfigured", undefined, preferredLocale);
+
 const buildShowMessage = ({
   preferredLocale,
   settings,
@@ -411,6 +446,16 @@ const buildShowMessage = ({
       "captcha.show.captchaCategory",
       {
         value: formatOptionalValue(settings.captchaCategoryId, preferredLocale),
+      },
+      preferredLocale
+    ),
+    t(
+      "captcha.show.attemptAlertChannel",
+      {
+        value: formatOptionalChannelMention(
+          settings.attemptAlertChannelId,
+          preferredLocale
+        ),
       },
       preferredLocale
     ),
@@ -583,6 +628,108 @@ const handleSetCategoryById = async ({
     category,
     context,
     interaction,
+  });
+};
+
+const isValidAttemptAlertChannelType = (channelType: ChannelType): boolean =>
+  channelType === ChannelType.GuildText;
+
+const resolveAttemptAlertChannelForSetting = ({
+  guild,
+  selectedChannel,
+}: {
+  guild: Guild;
+  selectedChannel: ReturnType<
+    ChatInputCommandInteraction["options"]["getChannel"]
+  >;
+}): Promise<TextChannel | null> => {
+  if (
+    !selectedChannel ||
+    !isValidAttemptAlertChannelType(selectedChannel.type)
+  ) {
+    return Promise.resolve(null);
+  }
+
+  return resolveTextChannelById({
+    channelId: selectedChannel.id,
+    guild,
+  });
+};
+
+const getAttemptAlertChannelPermissionError = ({
+  botMember,
+  channel,
+  preferredLocale,
+}: {
+  botMember: GuildMember;
+  channel: TextChannel;
+  preferredLocale?: string | null;
+}): string | null => {
+  const botPermissions = channel.permissionsFor(botMember);
+  if (!botPermissions?.has(PermissionFlagsBits.ViewChannel)) {
+    return t(
+      "captcha.errors.attemptAlertChannelViewPermission",
+      undefined,
+      preferredLocale
+    );
+  }
+
+  if (!botPermissions.has(PermissionFlagsBits.SendMessages)) {
+    return t(
+      "captcha.errors.attemptAlertChannelSendPermission",
+      undefined,
+      preferredLocale
+    );
+  }
+
+  return null;
+};
+
+const handleSetAttemptAlertChannel = async ({
+  context,
+  interaction,
+}: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
+  const alertChannel = await resolveAttemptAlertChannelForSetting({
+    guild: context.guild,
+    selectedChannel: interaction.options.getChannel("channel", true),
+  });
+  if (!alertChannel) {
+    await replyEphemeral({
+      content: t(
+        "captcha.errors.selectedChannelNotAttemptAlert",
+        undefined,
+        preferredLocale
+      ),
+      interaction,
+    });
+    return;
+  }
+
+  const permissionError = getAttemptAlertChannelPermissionError({
+    botMember: context.botMember,
+    channel: alertChannel,
+    preferredLocale,
+  });
+  if (permissionError) {
+    await replyEphemeral({
+      content: permissionError,
+      interaction,
+    });
+    return;
+  }
+
+  await savePatchAndReply({
+    guildId: context.guild.id,
+    interaction,
+    patch: {
+      attemptAlertChannelId: alertChannel.id,
+    },
+    successMessage: t(
+      "captcha.success.attemptAlertChannelSet",
+      { channelId: alertChannel.id },
+      preferredLocale
+    ),
   });
 };
 
@@ -883,6 +1030,7 @@ const handleSetDebugLogging = async ({
 
 const createFullResetPatch = (): GuildCaptchaSettingsPatch => ({
   allowAdminAccess: null,
+  attemptAlertChannelId: null,
   captchaCaseSensitive: null,
   captchaCategoryId: null,
   captchaNoiseLevel: null,
@@ -899,6 +1047,7 @@ const createFullResetPatch = (): GuildCaptchaSettingsPatch => ({
 const resetPatches: Record<ResetOption, GuildCaptchaSettingsPatch> = {
   all: createFullResetPatch(),
   "allow-admin-access": { allowAdminAccess: null },
+  "attempt-alert-channel": { attemptAlertChannelId: null },
   "captcha-category": { captchaCategoryId: null },
   "captcha-type": { captchaType: null },
   "case-sensitive": { captchaCaseSensitive: null },
@@ -917,6 +1066,7 @@ const getResetPatch = (option: ResetOption): GuildCaptchaSettingsPatch =>
 
 const setSubcommandHandlers: Record<string, SubcommandHandler> = {
   "allow-admin-access": handleSetAllowAdminAccess,
+  "attempt-alert-channel": handleSetAttemptAlertChannel,
   "captcha-category": handleSetCategory,
   "captcha-category-id": handleSetCategoryById,
   "captcha-type": handleSetCaptchaType,
@@ -1168,6 +1318,22 @@ export const captchaCommand: SlashCommand = {
                 )
                 .setMinValue(CAPTCHA_LIMITS.maxAttempts.min)
                 .setMaxValue(CAPTCHA_LIMITS.maxAttempts.max)
+                .setRequired(true)
+            )
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("attempt-alert-channel")
+            .setDescription(
+              t("commands.captcha.sub.attemptAlertChannel.description")
+            )
+            .addChannelOption((option) =>
+              option
+                .setName("channel")
+                .setDescription(
+                  t("commands.captcha.option.attemptAlertChannel.description")
+                )
+                .addChannelTypes(ChannelType.GuildText)
                 .setRequired(true)
             )
         )

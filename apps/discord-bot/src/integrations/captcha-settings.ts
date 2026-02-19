@@ -35,6 +35,7 @@ const CAPTCHA_TYPE_DEFAULT: CaptchaType = "image_text";
 
 export interface GuildCaptchaSettings {
   allowAdminAccess: boolean;
+  attemptAlertChannelId: string | null;
   captchaCaseSensitive: boolean;
   captchaCategoryId: string | null;
   captchaNoiseLevel: number;
@@ -50,6 +51,7 @@ export interface GuildCaptchaSettings {
 
 export interface GuildCaptchaSettingsPatch {
   allowAdminAccess?: boolean | null;
+  attemptAlertChannelId?: string | null;
   captchaCaseSensitive?: boolean | null;
   captchaCategoryId?: string | null;
   captchaNoiseLevel?: number | null;
@@ -65,6 +67,7 @@ export interface GuildCaptchaSettingsPatch {
 
 interface GuildCaptchaSettingsRecord {
   allowAdminAccess: boolean | null;
+  attemptAlertChannelId: string | null;
   captchaCaseSensitive: boolean | null;
   captchaCategoryId: string | null;
   captchaNoiseLevel: number | null;
@@ -89,6 +92,7 @@ interface CaptchaSettingsPrismaClient {
 
 const DEFAULT_GUILD_CAPTCHA_SETTINGS: GuildCaptchaSettings = {
   allowAdminAccess: true,
+  attemptAlertChannelId: null,
   captchaCaseSensitive: false,
   captchaCategoryId: null,
   captchaNoiseLevel: CAPTCHA_LIMITS.noiseLevel.defaultValue,
@@ -199,6 +203,7 @@ const mergeWithDefaults = (
     defaultValue: DEFAULT_GUILD_CAPTCHA_SETTINGS.allowAdminAccess,
     value: record?.allowAdminAccess,
   }),
+  attemptAlertChannelId: toOptionalId(record?.attemptAlertChannelId),
   captchaCaseSensitive: toBooleanWithDefault({
     defaultValue: DEFAULT_GUILD_CAPTCHA_SETTINGS.captchaCaseSensitive,
     value: record?.captchaCaseSensitive,
@@ -317,6 +322,68 @@ const resolveValidCategoryId = ({
   return resolveFetchedCategoryId({ categoryId, guild });
 };
 
+const isValidAttemptAlertChannelType = (channelType: ChannelType): boolean =>
+  channelType === ChannelType.GuildText;
+
+const resolveCachedAttemptAlertChannelId = ({
+  channelId,
+  guild,
+}: {
+  channelId: string;
+  guild: Guild;
+}): string | null => {
+  const cached = guild.channels.cache.get(channelId);
+  if (!cached || !isValidAttemptAlertChannelType(cached.type)) {
+    return null;
+  }
+
+  return cached.id;
+};
+
+const resolveFetchedAttemptAlertChannelId = async ({
+  channelId,
+  guild,
+}: {
+  channelId: string;
+  guild: Guild;
+}): Promise<string | null> => {
+  try {
+    const fetched = await guild.channels.fetch(channelId);
+    if (!fetched || !isValidAttemptAlertChannelType(fetched.type)) {
+      return null;
+    }
+
+    return fetched.id;
+  } catch {
+    return null;
+  }
+};
+
+const resolveValidAttemptAlertChannelId = ({
+  channelId,
+  guild,
+}: {
+  channelId: string | null;
+  guild: Guild;
+}): Promise<string | null> => {
+  if (!channelId) {
+    return Promise.resolve(null);
+  }
+
+  const cachedChannelId = resolveCachedAttemptAlertChannelId({
+    channelId,
+    guild,
+  });
+  if (cachedChannelId) {
+    return Promise.resolve(cachedChannelId);
+  }
+
+  return resolveFetchedAttemptAlertChannelId({
+    channelId,
+    guild,
+  });
+};
+
 const compactPatch = (
   patch: GuildCaptchaSettingsPatch
 ): Record<string, unknown> =>
@@ -357,19 +424,25 @@ export const getGuildCaptchaSettings = async (
   const storedSettings = await getStoredGuildCaptchaSettings(guild.id);
   const mergedSettings = mergeWithDefaults(storedSettings);
 
-  const [resolvedRoleId, resolvedCategoryId] = await Promise.all([
-    resolveValidRoleId({
-      guild,
-      roleId: mergedSettings.verifiedRoleId,
-    }),
-    resolveValidCategoryId({
-      categoryId: mergedSettings.captchaCategoryId,
-      guild,
-    }),
-  ]);
+  const [resolvedRoleId, resolvedCategoryId, resolvedAttemptAlertChannelId] =
+    await Promise.all([
+      resolveValidRoleId({
+        guild,
+        roleId: mergedSettings.verifiedRoleId,
+      }),
+      resolveValidCategoryId({
+        categoryId: mergedSettings.captchaCategoryId,
+        guild,
+      }),
+      resolveValidAttemptAlertChannelId({
+        channelId: mergedSettings.attemptAlertChannelId,
+        guild,
+      }),
+    ]);
 
   return {
     ...mergedSettings,
+    attemptAlertChannelId: resolvedAttemptAlertChannelId,
     captchaCategoryId: resolvedCategoryId,
     verifiedRoleId: resolvedRoleId,
   };

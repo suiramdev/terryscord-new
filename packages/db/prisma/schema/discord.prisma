@@ -2,6 +2,7 @@ model GuildVerificationSetting {
   guildId            String   @id
   verifiedRoleId     String?
   captchaCategoryId  String?
+  attemptAlertChannelId String?
   captchaCaseSensitive Boolean?
   captchaNoiseLevel  Int?
   maxAttempts        Int?

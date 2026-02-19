@@ -1,6 +1,10 @@
 export const frTranslations = {
   "captcha.errors.adminRequired":
     "Vous devez avoir la permission administrateur pour gerer les parametres captcha.",
+  "captcha.errors.attemptAlertChannelSendPermission":
+    "Je dois pouvoir envoyer des messages dans ce salon pour y publier les alertes d'essais captcha.",
+  "captcha.errors.attemptAlertChannelViewPermission":
+    "Je dois pouvoir voir ce salon pour y publier les alertes d'essais captcha.",
   "captcha.errors.botMemberUnavailable":
     "Impossible de charger mes informations de membre bot dans ce serveur. Reessayez.",
   "captcha.errors.categoryIdInvalid":
@@ -32,6 +36,8 @@ export const frTranslations = {
     "Echec de l'enregistrement des parametres captcha. Verifiez la connexion a la base de donnees puis reessayez.",
   "captcha.errors.selectedCategoryNotResolved":
     "Impossible de resoudre la categorie selectionnee dans ce serveur.",
+  "captcha.errors.selectedChannelNotAttemptAlert":
+    "Le salon d'alerte doit etre un salon texte.",
   "captcha.errors.selectedChannelNotCategory":
     "Le salon selectionne doit etre une categorie.",
   "captcha.errors.selectedRoleNotFound":
@@ -49,6 +55,7 @@ export const frTranslations = {
   "captcha.errors.userNotGuildMember":
     "Cet utilisateur n'est actuellement pas membre de ce serveur.",
   "captcha.show.allowAdminAccess": "Acces administrateur : {value}",
+  "captcha.show.attemptAlertChannel": "Salon d'alerte essais : {value}",
   "captcha.show.captchaCategory": "Categorie captcha : {value}",
   "captcha.show.captchaType": "Type de captcha : {value}",
   "captcha.show.caseSensitiveAnswers":
@@ -57,7 +64,7 @@ export const frTranslations = {
   "captcha.show.codeLength": "Longueur du code : {value}",
   "captcha.show.debugLogging": "Journalisation debug : {value}",
   "captcha.show.kickOnFailure": "Expulsion en cas d'echec : {value}",
-  "captcha.show.maxAttempts": "Essais max : {value}",
+  "captcha.show.maxAttempts": "Seuil d'alerte essais : {value}",
   "captcha.show.noiseLevel": "Niveau de bruit : {value}",
   "captcha.show.sourceDefault":
     "Aucun parametre n'est encore stocke ; les valeurs par defaut hardcodees sont actives.",
@@ -67,6 +74,8 @@ export const frTranslations = {
   "captcha.show.title": "Parametres captcha :",
   "captcha.show.verifiedRole": "Role verifie : {value}",
   "captcha.success.adminAccessSet": "Acces admin aux salons captcha {value}.",
+  "captcha.success.attemptAlertChannelSet":
+    "Salon d'alerte essais defini sur <#{channelId}>.",
   "captcha.success.captchaTypeSet": "Type de captcha defini sur **{value}**.",
   "captcha.success.caseSensitiveSet":
     "Correspondance des reponses captcha sensible a la casse {value}.",
@@ -80,7 +89,8 @@ export const frTranslations = {
   "captcha.success.debugRunStarted":
     "Workflow de verification captcha demarre pour <@{memberId}>.",
   "captcha.success.kickOnFailureSet": "Expulsion en cas d'echec {value}.",
-  "captcha.success.maxAttemptsSet": "Essais max definis sur **{value}**.",
+  "captcha.success.maxAttemptsSet":
+    "Seuil d'alerte essais defini sur **{value}**.",
   "captcha.success.noiseLevelSet":
     "Niveau de bruit captcha defini sur **{value}**.",
   "captcha.success.resetAll":
@@ -96,6 +106,8 @@ export const frTranslations = {
     "Gerer les parametres de verification captcha",
   "commands.captcha.groupSet.description":
     "Definir les options de configuration du captcha",
+  "commands.captcha.option.attemptAlertChannel.description":
+    "Salon recevant les alertes de tentatives captcha",
   "commands.captcha.option.category.description":
     "Categorie des salons captcha temporaires",
   "commands.captcha.option.categoryId.description": "ID du salon categorie",
@@ -112,7 +124,7 @@ export const frTranslations = {
   "commands.captcha.option.format.description":
     "Utiliser {username}, {userid}, {suffix}, {prefix}",
   "commands.captcha.option.maxAttemptsValue.description":
-    "Nombre maximal d'essais",
+    "Nombre d'essais rates avant alerte administrateur",
   "commands.captcha.option.member.description":
     "Membre pour lequel lancer la verification captcha",
   "commands.captcha.option.noiseLevelValue.description":
@@ -124,6 +136,7 @@ export const frTranslations = {
   "commands.captcha.option.type.description": "Type de captcha",
   "commands.captcha.resetChoice.all": "Tous les parametres",
   "commands.captcha.resetChoice.allowAdminAccess": "Acces administrateur",
+  "commands.captcha.resetChoice.attemptAlertChannel": "Salon d'alerte essais",
   "commands.captcha.resetChoice.captchaCategory": "Categorie captcha",
   "commands.captcha.resetChoice.captchaType": "Type de captcha",
   "commands.captcha.resetChoice.caseSensitive": "Sensibilite a la casse",
@@ -132,12 +145,14 @@ export const frTranslations = {
   "commands.captcha.resetChoice.codeLength": "Longueur du code",
   "commands.captcha.resetChoice.debugLogging": "Journalisation debug",
   "commands.captcha.resetChoice.kickOnFailure": "Expulsion en cas d'echec",
-  "commands.captcha.resetChoice.maxAttempts": "Nombre maximal d'essais",
+  "commands.captcha.resetChoice.maxAttempts": "Seuil d'alerte essais",
   "commands.captcha.resetChoice.noiseLevel": "Niveau de bruit",
   "commands.captcha.resetChoice.timeoutSeconds": "Delai (secondes)",
   "commands.captcha.resetChoice.verifiedRole": "Role verifie",
   "commands.captcha.sub.allowAdminAccess.description":
     "Activer ou desactiver la visibilite admin des salons captcha",
+  "commands.captcha.sub.attemptAlertChannel.description":
+    "Definir le salon de notification des tentatives captcha",
   "commands.captcha.sub.captchaType.description":
     "Definir le type de challenge captcha",
   "commands.captcha.sub.caseSensitive.description":
@@ -158,7 +173,7 @@ export const frTranslations = {
   "commands.captcha.sub.kickOnFailure.description":
     "Activer ou desactiver l'expulsion des utilisateurs qui echouent",
   "commands.captcha.sub.maxAttempts.description":
-    "Definir le nombre maximal d'essais captcha",
+    "Definir le seuil d'essais rates avant alerte admin",
   "commands.captcha.sub.noiseLevel.description":
     "Definir le niveau de bruit captcha pour les leurres et traces",
   "commands.captcha.sub.reset.description":
@@ -197,6 +212,9 @@ export const frTranslations = {
   "verification.channelName.prefix": "verification",
   "verification.embed.defaultTitle": "Verification",
   "verification.image.description": "Challenge captcha",
+  "verification.message.attemptAlertThresholdReached":
+    "<@{memberId}> a atteint **{attemptsUsed}** erreurs captcha (seuil: {threshold}) dans <#{verificationChannelId}>.",
+  "verification.message.attemptAlertTitle": "Alerte captcha",
   "verification.message.deletedVerifiedRole":
     "Verification terminee, mais le role verifie configure n'existe plus. Merci de contacter un administrateur.",
   "verification.message.failureDefault":
@@ -205,10 +223,8 @@ export const frTranslations = {
     "Verification echouee car vous avez depasse le nombre maximal d'essais.",
   "verification.message.failureTime":
     "Verification expiree avant qu'une reponse captcha correcte ne soit fournie.",
-  "verification.message.incorrectAttemptPlural":
-    "Reponse incorrecte. {attemptsRemaining} essais restants.",
-  "verification.message.incorrectAttemptSingular":
-    "Reponse incorrecte. {attemptsRemaining} essai restant.",
+  "verification.message.incorrectAttemptRegenerated":
+    "Reponse incorrecte. Un nouveau captcha a ete genere.",
   "verification.message.internalError":
     "La verification n'a pas pu etre terminee a cause d'une erreur interne. Merci de contacter un administrateur.",
   "verification.message.missingVerifiedRole":
