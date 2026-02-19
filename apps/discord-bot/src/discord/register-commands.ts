@@ -1,8 +1,8 @@
 import { env } from "@terryscord/env/bot";
 import { REST, Routes } from "discord.js";
+import { log } from "evlog";
 
 import type { SlashCommand } from "@/commands/types";
-import { logger } from "@/logger";
 
 type CommandScope = "global" | "guild";
 
@@ -21,34 +21,49 @@ const resyncCommandsForScope = async ({
   route,
   scope,
 }: SyncScopeOptions): Promise<void> => {
+  const startedAt = Date.now();
+
+  log.info({
+    commandCount: payload.length,
+    guildId,
+    message: "Starting Discord slash command re-sync",
+    route,
+    scope,
+  });
+
   await rest.put(route, { body: [] });
 
-  logger.info(
-    {
-      commandCount: 0,
-      guildId,
-      scope,
-    },
-    "Cleared Discord slash commands"
-  );
+  log.info({
+    commandCount: 0,
+    guildId,
+    message: "Cleared Discord slash commands",
+    scope,
+  });
 
   await rest.put(route, { body: payload });
 
-  logger.info(
-    {
-      commandCount: payload.length,
-      guildId,
-      scope,
-    },
-    "Re-synced Discord slash commands"
-  );
+  log.info({
+    commandCount: payload.length,
+    durationMs: Date.now() - startedAt,
+    guildId,
+    message: "Re-synced Discord slash commands",
+    route,
+    scope,
+  });
 };
 
 export const registerApplicationCommands = async (
   commands: readonly SlashCommand[]
 ): Promise<void> => {
+  const startedAt = Date.now();
   const rest = new REST({ version: "10" }).setToken(env.DISCORD_BOT_TOKEN);
   const payload = commands.map((command) => command.data.toJSON());
+
+  log.info({
+    commandCount: payload.length,
+    message: "Registering Discord slash commands",
+    targetGuildId: env.DISCORD_GUILD_ID ?? null,
+  });
 
   if (env.DISCORD_GUILD_ID) {
     await resyncCommandsForScope({
@@ -68,5 +83,12 @@ export const registerApplicationCommands = async (
     rest,
     route: Routes.applicationCommands(env.DISCORD_CLIENT_ID),
     scope: "global",
+  });
+
+  log.info({
+    commandCount: payload.length,
+    durationMs: Date.now() - startedAt,
+    message: "Completed Discord slash command registration",
+    targetGuildId: env.DISCORD_GUILD_ID ?? null,
   });
 };

@@ -15,11 +15,11 @@ import type {
   Role,
   TextChannel,
 } from "discord.js";
+import { log } from "evlog";
 
 import { t } from "@/i18n";
 import { getGuildCaptchaSettings } from "@/integrations/captcha-settings";
 import type { GuildCaptchaSettings } from "@/integrations/captcha-settings";
-import { logger } from "@/logger";
 
 const CAPTCHA_CHANNEL_TOPIC_PREFIX = "captcha-verification";
 const CAPTCHA_IMAGE_FILE_NAME = "captcha.png";
@@ -269,13 +269,11 @@ const sendChannelMessageSafely = async ({
   try {
     await channel.send(options);
   } catch (error: unknown) {
-    logger.warn(
-      {
-        channelId: channel.id,
-        err: error,
-      },
-      "Failed to send message to captcha verification channel"
-    );
+    log.warn({
+      channelId: channel.id,
+      err: error,
+      message: "Failed to send message to captcha verification channel",
+    });
   }
 };
 
@@ -287,27 +285,23 @@ const deleteChannelSafely = async ({
   reason: string;
 }): Promise<void> => {
   if (!channel.deletable) {
-    logger.warn(
-      {
-        channelId: channel.id,
-        guildId: channel.guildId,
-      },
-      "Captcha verification channel is not deletable by the bot"
-    );
+    log.warn({
+      channelId: channel.id,
+      guildId: channel.guildId,
+      message: "Captcha verification channel is not deletable by the bot",
+    });
     return;
   }
 
   try {
     await channel.delete(reason);
   } catch (error: unknown) {
-    logger.warn(
-      {
-        channelId: channel.id,
-        err: error,
-        guildId: channel.guildId,
-      },
-      "Failed to delete captcha verification channel"
-    );
+    log.warn({
+      channelId: channel.id,
+      err: error,
+      guildId: channel.guildId,
+      message: "Failed to delete captcha verification channel",
+    });
   }
 };
 
@@ -332,7 +326,7 @@ const logCaptchaDebug = ({
     return;
   }
 
-  logger.info(payload, message);
+  log.info({ ...payload, message });
 };
 
 const collectAdministratorRoleIds = async (guild: Guild): Promise<string[]> => {
@@ -507,14 +501,13 @@ const createVerificationChannel = async ({
       throw error;
     }
 
-    logger.warn(
-      {
-        categoryId: settings.captchaCategoryId,
-        err: error,
-        guildId: member.guild.id,
-      },
-      "Failed to create captcha channel in configured category. Retrying without category."
-    );
+    log.warn({
+      categoryId: settings.captchaCategoryId,
+      err: error,
+      guildId: member.guild.id,
+      message:
+        "Failed to create captcha channel in configured category. Retrying without category.",
+    });
 
     logCaptchaDebug({
       debugEnabled,
@@ -629,15 +622,13 @@ const assignVerifiedRoleWithFeedback = async ({
       },
     });
   } catch (error: unknown) {
-    logger.error(
-      {
-        err: error,
-        guildId: member.guild.id,
-        roleId: role.id,
-        userId: member.id,
-      },
-      "Failed to assign verified role after captcha success"
-    );
+    log.error({
+      err: error,
+      guildId: member.guild.id,
+      message: "Failed to assign verified role after captcha success",
+      roleId: role.id,
+      userId: member.id,
+    });
 
     await sendChannelMessageSafely({
       channel,
@@ -714,27 +705,23 @@ const kickMemberSafely = async ({
   reason: string;
 }): Promise<void> => {
   if (!member.kickable) {
-    logger.warn(
-      {
-        guildId: member.guild.id,
-        userId: member.id,
-      },
-      "Member is not kickable after captcha verification failure"
-    );
+    log.warn({
+      guildId: member.guild.id,
+      message: "Member is not kickable after captcha verification failure",
+      userId: member.id,
+    });
     return;
   }
 
   try {
     await member.kick(reason);
   } catch (error: unknown) {
-    logger.error(
-      {
-        err: error,
-        guildId: member.guild.id,
-        userId: member.id,
-      },
-      "Failed to kick member after captcha verification failure"
-    );
+    log.error({
+      err: error,
+      guildId: member.guild.id,
+      message: "Failed to kick member after captcha verification failure",
+      userId: member.id,
+    });
   }
 };
 
@@ -933,13 +920,11 @@ const logUnavailableAttemptAlertChannel = ({
   channelId: string;
   guildId: string;
 }): void => {
-  logger.warn(
-    {
-      alertChannelId: channelId,
-      guildId,
-    },
-    "Configured attempt alert channel is unavailable"
-  );
+  log.warn({
+    alertChannelId: channelId,
+    guildId,
+    message: "Configured attempt alert channel is unavailable",
+  });
 };
 
 const resolveConfiguredAttemptAlertChannel = async ({
@@ -1091,13 +1076,11 @@ const sendCaptchaChallenge = async ({
     });
     return sentMessage.id;
   } catch (error: unknown) {
-    logger.warn(
-      {
-        channelId: channel.id,
-        err: error,
-      },
-      "Failed to send captcha challenge in verification channel"
-    );
+    log.warn({
+      channelId: channel.id,
+      err: error,
+      message: "Failed to send captcha challenge in verification channel",
+    });
     return null;
   }
 };
@@ -1113,14 +1096,12 @@ const deleteMessageSafely = async ({
     const message = await channel.messages.fetch(messageId);
     await message.delete();
   } catch (error: unknown) {
-    logger.warn(
-      {
-        channelId: channel.id,
-        err: error,
-        messageId,
-      },
-      "Failed to delete previous captcha challenge message"
-    );
+    log.warn({
+      channelId: channel.id,
+      err: error,
+      message: "Failed to delete previous captcha challenge message",
+      messageId,
+    });
   }
 };
 
@@ -1380,15 +1361,13 @@ const processCaptchaMessageSafely = async ({
       state,
     });
   } catch (error: unknown) {
-    logger.error(
-      {
-        channelId: channel.id,
-        err: error,
-        guildId: member.guild.id,
-        userId: member.id,
-      },
-      "Failed to process collected captcha message"
-    );
+    log.error({
+      channelId: channel.id,
+      err: error,
+      guildId: member.guild.id,
+      message: "Failed to process collected captcha message",
+      userId: member.id,
+    });
   }
 };
 
@@ -1530,14 +1509,12 @@ const handleVerificationWorkflowError = async ({
   error: unknown;
   member: GuildMember;
 }): Promise<void> => {
-  logger.error(
-    {
-      err: error,
-      guildId: member.guild.id,
-      userId: member.id,
-    },
-    "Failed to process captcha verification for guild member"
-  );
+  log.error({
+    err: error,
+    guildId: member.guild.id,
+    message: "Failed to process captcha verification for guild member",
+    userId: member.id,
+  });
 
   await sendChannelMessageSafely({
     channel,
@@ -1626,13 +1603,11 @@ const logDuplicateSession = ({
     return false;
   }
 
-  logger.warn(
-    {
-      guildId: member.guild.id,
-      userId: member.id,
-    },
-    "A captcha verification session is already active for this member"
-  );
+  log.warn({
+    guildId: member.guild.id,
+    message: "A captcha verification session is already active for this member",
+    userId: member.id,
+  });
   return true;
 };
 
@@ -1645,21 +1620,37 @@ const runMemberVerificationSession = async ({
   sessionKey: string;
   source: VerificationSource;
 }): Promise<void> => {
+  const startedAt = Date.now();
+
+  log.info({
+    guildId: member.guild.id,
+    message: "Starting captcha verification session",
+    source,
+    userId: member.id,
+  });
+
   try {
     await runVerificationWorkflow({
       member,
       source,
     });
+
+    log.info({
+      durationMs: Date.now() - startedAt,
+      guildId: member.guild.id,
+      message: "Captcha verification session completed",
+      source,
+      userId: member.id,
+    });
   } catch (error: unknown) {
-    logger.error(
-      {
-        err: error,
-        guildId: member.guild.id,
-        source,
-        userId: member.id,
-      },
-      "Captcha workflow failed"
-    );
+    log.error({
+      durationMs: Date.now() - startedAt,
+      err: error,
+      guildId: member.guild.id,
+      message: "Captcha workflow failed",
+      source,
+      userId: member.id,
+    });
   } finally {
     activeVerificationSessions.delete(sessionKey);
   }
@@ -1673,6 +1664,11 @@ const startCaptchaVerificationSession = ({
   source: VerificationSource;
 }): boolean => {
   if (member.user.bot) {
+    log.debug({
+      guildId: member.guild.id,
+      message: "Skipping captcha verification for bot member",
+      userId: member.id,
+    });
     return false;
   }
 
@@ -1781,6 +1777,12 @@ const recoverPendingVerificationForGuild = async (
   await guild.channels.fetch();
 
   const pendingMemberIds = collectPendingVerificationMemberIds(guild);
+  log.info({
+    guildId: guild.id,
+    message: "Scanned guild for pending captcha verification sessions",
+    pendingMemberCount: pendingMemberIds.length,
+  });
+
   if (pendingMemberIds.length === 0) {
     return;
   }
@@ -1802,13 +1804,11 @@ export const cleanupOrphanedVerificationChannels = async (
     try {
       await cleanupOrphanedGuildChannels(guild);
     } catch (error: unknown) {
-      logger.warn(
-        {
-          err: error,
-          guildId: guild.id,
-        },
-        "Failed to clean orphaned captcha channels for guild"
-      );
+      log.warn({
+        err: error,
+        guildId: guild.id,
+        message: "Failed to clean orphaned captcha channels for guild",
+      });
     }
   }
 };
@@ -1820,13 +1820,12 @@ export const recoverPendingVerificationSessions = async (
     try {
       await recoverPendingVerificationForGuild(guild);
     } catch (error: unknown) {
-      logger.warn(
-        {
-          err: error,
-          guildId: guild.id,
-        },
-        "Failed to recover pending captcha verification sessions for guild"
-      );
+      log.warn({
+        err: error,
+        guildId: guild.id,
+        message:
+          "Failed to recover pending captcha verification sessions for guild",
+      });
     }
   }
 };
@@ -1837,7 +1836,19 @@ export const triggerCaptchaVerificationForMember = ({
 }: {
   member: GuildMember;
   source: VerificationSource;
-}): boolean => startCaptchaVerificationSession({ member, source });
+}): boolean => {
+  const started = startCaptchaVerificationSession({ member, source });
+
+  log.info({
+    guildId: member.guild.id,
+    message: "Captcha verification trigger evaluated",
+    source,
+    started,
+    userId: member.id,
+  });
+
+  return started;
+};
 
 export const handleGuildMemberAdd = (member: GuildMember): void => {
   triggerCaptchaVerificationForMember({

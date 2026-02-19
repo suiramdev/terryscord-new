@@ -1,8 +1,8 @@
 import { Events } from "discord.js";
 import type { Client } from "discord.js";
+import { log } from "evlog";
 
 import { commandRegistry } from "@/commands";
-import { logger } from "@/logger";
 
 import {
   cleanupOrphanedVerificationChannels,
@@ -21,13 +21,33 @@ export const registerEventHandlers = ({
   client,
   onReady,
 }: RegisterEventHandlersOptions): void => {
+  log.info({
+    message: "Registering Discord event handlers",
+    registeredCommandCount: commandRegistry.size,
+  });
+
   client.once(Events.ClientReady, async (readyClient) => {
+    const startedAt = Date.now();
+
+    log.info({
+      message: "Handling Discord ready event",
+      userId: readyClient.user.id,
+    });
+
     try {
       await handleReady(readyClient, onReady);
       await recoverPendingVerificationSessions(readyClient);
       await cleanupOrphanedVerificationChannels(readyClient);
+      log.info({
+        durationMs: Date.now() - startedAt,
+        message: "Discord ready event completed",
+      });
     } catch (error: unknown) {
-      logger.error({ err: error }, "Ready handler failed");
+      log.error({
+        durationMs: Date.now() - startedAt,
+        err: error,
+        message: "Ready handler failed",
+      });
     }
   });
 
@@ -36,35 +56,43 @@ export const registerEventHandlers = ({
   });
 
   client.on(Events.GuildMemberAdd, async (member) => {
+    log.debug({
+      guildId: member.guild.id,
+      message: "Received guild member add event",
+      userId: member.id,
+    });
+
     try {
       await handleGuildMemberAdd(member);
     } catch (error: unknown) {
-      logger.error(
-        {
-          err: error,
-          guildId: member.guild.id,
-          userId: member.id,
-        },
-        "Guild member add handler failed"
-      );
+      log.error({
+        err: error,
+        guildId: member.guild.id,
+        message: "Guild member add handler failed",
+        userId: member.id,
+      });
     }
   });
 
   client.on(Events.Warn, (warning) => {
-    logger.warn({ warning }, "Discord client warning");
+    log.warn({
+      message: "Discord client warning",
+      warning,
+    });
   });
 
   client.on(Events.Error, (error) => {
-    logger.error({ err: error }, "Discord client error");
+    log.error({
+      err: error,
+      message: "Discord client error",
+    });
   });
 
   client.on(Events.ShardError, (error, shardId) => {
-    logger.error(
-      {
-        err: error,
-        shardId,
-      },
-      "Discord shard error"
-    );
+    log.error({
+      err: error,
+      message: "Discord shard error",
+      shardId,
+    });
   });
 };

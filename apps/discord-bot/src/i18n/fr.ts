@@ -1,241 +1,308 @@
 export const frTranslations = {
+  "bulkDeleteCategoryChannels.errors.botManageChannelsRequired":
+    "Je dois avoir la permission `Gérer les salons` pour supprimer les salons de cette catégorie.",
+  "bulkDeleteCategoryChannels.errors.botMissingRequiredPermissions":
+    "Je n'ai pas les permissions nécessaires pour exécuter cette suppression avancée.",
+  "bulkDeleteCategoryChannels.errors.categoryNotFound":
+    "Impossible de trouver la catégorie sélectionnée dans ce serveur.",
+  "bulkDeleteCategoryChannels.errors.manageChannelsRequired":
+    "Vous devez avoir la permission `Gérer les salons` pour utiliser cette commande.",
+  "bulkDeleteCategoryChannels.errors.memberMissingRequiredPermissions":
+    "Vous n'avez pas les permissions nécessaires pour ce type de suppression.",
+  "bulkDeleteCategoryChannels.errors.noTargets":
+    "Aucune cible trouvée pour cette requête de suppression.",
+  "bulkDeleteCategoryChannels.errors.serverOnly":
+    "Cette commande peut uniquement être utilisée dans un serveur.",
+  "bulkDeleteCategoryChannels.errors.subjectNotFound":
+    "Sous-commande de suppression avancée non reconnue.",
+  "bulkDeleteCategoryChannels.errors.subjectRequired":
+    "Vous devez fournir un sujet (ID, nom ou catégorie) pour ce type de ciblage.",
+  "bulkDeleteCategoryChannels.labels.mode.all": "Tout",
+  "bulkDeleteCategoryChannels.labels.mode.limit": "Limité",
+  "bulkDeleteCategoryChannels.labels.scope.all": "Tout",
+  "bulkDeleteCategoryChannels.labels.scope.categories": "Catégories",
+  "bulkDeleteCategoryChannels.labels.scope.channels": "Salons",
+  "bulkDeleteCategoryChannels.labels.scope.messages": "Messages",
+  "bulkDeleteCategoryChannels.labels.subjectType.all": "Tout le serveur",
+  "bulkDeleteCategoryChannels.labels.subjectType.category-id":
+    "ID de catégorie",
+  "bulkDeleteCategoryChannels.labels.subjectType.channel-id": "ID de salon",
+  "bulkDeleteCategoryChannels.labels.subjectType.channel-name": "Nom de salon",
+  "bulkDeleteCategoryChannels.labels.subjectType.parent-category":
+    "Catégorie parente",
+  "bulkDeleteCategoryChannels.messages.advancedConfirmationPrompt":
+    "Action risquée: cette requête va supprimer des éléments de façon irréversible.\n\n{summary}\n\nConfirmez-vous l'opération ?",
+  "bulkDeleteCategoryChannels.messages.advancedDeletionCompleted":
+    "Suppression avancée terminée.\nMessages supprimés: **{deletedMessages}**\nSalons supprimés: **{deletedChannels}**\nCatégories supprimées: **{deletedCategories}**\nÉchecs messages: **{failedMessageBatches}**\nÉchecs salons: **{failedChannels}**\nÉchecs catégories: **{failedCategories}**",
+  "bulkDeleteCategoryChannels.messages.advancedDeletionInProgress":
+    "Suppression avancée en cours...",
+  "bulkDeleteCategoryChannels.messages.advancedPlanSummary":
+    "Scope: **{scope}**\nSujet: **{subjectType}**\nMode: **{mode}**\nCanaux de messages ciblés: **{messageChannels}**\nSalons ciblés: **{channels}**\nCatégories ciblées: **{categories}**",
+  "bulkDeleteCategoryChannels.messages.confirmationPrompt":
+    "Action risquée: vous allez supprimer **{channelCount}** salons dans la catégorie **{categoryName}**.\nConfirmez-vous cette suppression ?",
+  "bulkDeleteCategoryChannels.messages.confirmationTimedOut":
+    "Suppression annulée: délai de confirmation dépassé.",
+  "bulkDeleteCategoryChannels.messages.deletionCancelled":
+    "Suppression annulée.",
+  "bulkDeleteCategoryChannels.messages.deletionCompleted":
+    "Suppression terminée pour **{categoryName}**.\nSalons supprimés: **{deletedChannels}**\nÉchecs: **{failedChannels}**",
+  "bulkDeleteCategoryChannels.messages.deletionInProgress":
+    "Suppression en cours de **{channelCount}** salons dans **{categoryName}**...",
+  "bulkDeleteCategoryChannels.messages.noChannelsInCategory":
+    "Aucun salon à supprimer dans la catégorie **{categoryName}**.",
   "captcha.errors.adminRequired":
-    "Vous devez avoir la permission administrateur pour gerer les parametres captcha.",
+    "Vous devez avoir la permission administrateur pour gérer les paramètres captcha.",
   "captcha.errors.attemptAlertChannelSendPermission":
     "Je dois pouvoir envoyer des messages dans ce salon pour y publier les alertes d'essais captcha.",
   "captcha.errors.attemptAlertChannelViewPermission":
     "Je dois pouvoir voir ce salon pour y publier les alertes d'essais captcha.",
   "captcha.errors.botMemberUnavailable":
-    "Impossible de charger mes informations de membre bot dans ce serveur. Reessayez.",
+    "Impossible de charger mes informations de membre bot dans ce serveur. Réessayez.",
   "captcha.errors.categoryIdInvalid":
-    "L'ID de categorie fourni est invalide ou n'appartient pas a une categorie de ce serveur.",
+    "L'ID de catégorie fourni est invalide ou n'appartient pas à une catégorie de ce serveur.",
 
   "captcha.errors.categoryManagePermission":
-    "J'ai besoin de la permission `Gerer les salons` dans cette categorie pour creer des salons captcha.",
+    "J'ai besoin de la permission `Gérer les salons` dans cette catégorie pour créer des salons captcha.",
   "captcha.errors.categoryViewPermission":
-    "Je dois pouvoir voir cette categorie pour y creer des salons captcha.",
+    "Je dois pouvoir voir cette catégorie pour y créer des salons captcha.",
 
   "captcha.errors.channelFormatLength":
     "Le format de nom de salon doit contenir entre 3 et 80 caracteres.",
   "captcha.errors.codeLengthRange":
-    "La longueur du code doit etre comprise entre {min} et {max}.",
+    "La longueur du code doit être comprise entre {min} et {max}.",
 
   "captcha.errors.debugRunDisabled":
-    "`/captcha debug-run` est desactive hors mode developpement pour eviter une utilisation accidentelle en production.",
+    "`/captcha debug-run` est désactivé hors mode développement pour éviter une utilisation accidentelle en production.",
   "captcha.errors.maxAttemptsRange":
-    "Le nombre maximal d'essais doit etre compris entre {min} et {max}.",
+    "Le nombre maximal d'essais doit être compris entre {min} et {max}.",
   "captcha.errors.noiseLevelRange":
-    "Le niveau de bruit doit etre compris entre {min} et {max}.",
+    "Le niveau de bruit doit être compris entre {min} et {max}.",
   "captcha.errors.roleAboveBot":
-    "Ce role est au-dessus de mon role le plus eleve, je ne peux donc pas l'attribuer.",
+    "Ce rôle est au-dessus de mon rôle le plus élevé, je ne peux donc pas l'attribuer.",
   "captcha.errors.roleEveryone":
-    "Le role @everyone ne peut pas etre configure comme role verifie.",
+    "Le rôle @everyone ne peut pas être configuré comme rôle vérifié.",
   "captcha.errors.roleManaged":
-    "Les roles geres/integration ne peuvent pas etre configures comme role verifie.",
+    "Les rôles gérés/integration ne peuvent pas être configurés comme rôle vérifié.",
   "captcha.errors.saveFailed":
-    "Echec de l'enregistrement des parametres captcha. Verifiez la connexion a la base de donnees puis reessayez.",
+    "Échec de l'enregistrement des paramètres captcha. Vérifiez la connexion à la base de données puis réessayez.",
   "captcha.errors.selectedCategoryNotResolved":
-    "Impossible de resoudre la categorie selectionnee dans ce serveur.",
+    "Impossible de résoudre la catégorie sélectionnée dans ce serveur.",
   "captcha.errors.selectedChannelNotAttemptAlert":
-    "Le salon d'alerte doit etre un salon texte.",
+    "Le salon d'alerte doit être un salon texte.",
   "captcha.errors.selectedChannelNotCategory":
-    "Le salon selectionne doit etre une categorie.",
+    "Le salon sélectionné doit être une catégorie.",
   "captcha.errors.selectedRoleNotFound":
-    "Impossible de trouver le role selectionne.",
+    "Impossible de trouver le rôle sélectionné.",
   "captcha.errors.serverOnly":
-    "Cette commande peut uniquement etre utilisee dans un serveur.",
+    "Cette commande peut uniquement être utilisée dans un serveur.",
   "captcha.errors.timeoutRange":
-    "Le delai doit etre compris entre {min} et {max} secondes.",
+    "Le délai doit être compris entre {min} et {max} secondes.",
   "captcha.errors.unsupportedCaptchaType":
-    "Type de captcha non pris en charge. Valeurs supportees : {supported}.",
+    "Type de captcha non pris en charge. Valeurs supportées : {supported}.",
   "captcha.errors.unsupportedSetSubcommand":
-    "Sous-commande de parametre captcha non prise en charge.",
+    "Sous-commande de paramètre captcha non prise en charge.",
   "captcha.errors.unsupportedSubcommand":
     "Sous-commande captcha non prise en charge.",
   "captcha.errors.userNotGuildMember":
     "Cet utilisateur n'est actuellement pas membre de ce serveur.",
-  "captcha.show.allowAdminAccess": "Acces administrateur : {value}",
+  "captcha.show.allowAdminAccess": "Accès administrateur : {value}",
   "captcha.show.attemptAlertChannel": "Salon d'alerte essais : {value}",
-  "captcha.show.captchaCategory": "Categorie captcha : {value}",
+  "captcha.show.captchaCategory": "Catégorie captcha : {value}",
   "captcha.show.captchaType": "Type de captcha : {value}",
   "captcha.show.caseSensitiveAnswers":
-    "Reponses sensibles a la casse : {value}",
+    "Réponses sensibles à la casse : {value}",
   "captcha.show.channelNameFormat": "Format du nom de salon : {value}",
   "captcha.show.codeLength": "Longueur du code : {value}",
   "captcha.show.debugLogging": "Journalisation debug : {value}",
-  "captcha.show.kickOnFailure": "Expulsion en cas d'echec : {value}",
+  "captcha.show.kickOnFailure": "Expulsion en cas d'échec : {value}",
   "captcha.show.maxAttempts": "Seuil d'alerte essais : {value}",
   "captcha.show.noiseLevel": "Niveau de bruit : {value}",
   "captcha.show.sourceDefault":
-    "Aucun parametre n'est encore stocke ; les valeurs par defaut hardcodees sont actives.",
+    "Aucun paramètre n'est encore stocké ; les valeurs par défaut hardcodées sont actives.",
   "captcha.show.sourceStored":
-    "Parametres de base de donnees charges (les valeurs de secours restent appliquees aux valeurs invalides/manquantes).",
-  "captcha.show.timeoutSeconds": "Delai (secondes) : {value}",
-  "captcha.show.title": "Parametres captcha :",
-  "captcha.show.verifiedRole": "Role verifie : {value}",
-  "captcha.success.adminAccessSet": "Acces admin aux salons captcha {value}.",
+    "Paramètres de base de données charges (les valeurs de secours restent appliquées aux valeurs invalides/manquantes).",
+  "captcha.show.timeoutSeconds": "Délai (secondes) : {value}",
+  "captcha.show.title": "Paramètres captcha :",
+  "captcha.show.verifiedRole": "Rôle vérifié : {value}",
+  "captcha.success.adminAccessSet": "Accès admin aux salons captcha {value}.",
   "captcha.success.attemptAlertChannelSet":
-    "Salon d'alerte essais defini sur <#{channelId}>.",
-  "captcha.success.captchaTypeSet": "Type de captcha defini sur **{value}**.",
+    "Salon d'alerte essais défini sur <#{channelId}>.",
+  "captcha.success.captchaTypeSet": "Type de captcha défini sur **{value}**.",
   "captcha.success.caseSensitiveSet":
-    "Correspondance des reponses captcha sensible a la casse {value}.",
+    "Correspondance des réponses captcha sensible à la casse {value}.",
   "captcha.success.categorySet":
-    "Categorie captcha definie sur **{categoryName}**.",
+    "Catégorie captcha définie sur **{categoryName}**.",
   "captcha.success.channelNameFormatUpdated":
-    "Format du nom de salon mis a jour. Placeholders supportes : {username}, {userid}, {suffix}, {prefix}.",
+    "Format du nom de salon mis à jour. Placeholders supportés : {username}, {userid}, {suffix}, {prefix}.",
   "captcha.success.codeLengthSet":
-    "Longueur du code captcha definie sur **{value}**.",
+    "Longueur du code captcha définie sur **{value}**.",
   "captcha.success.debugLoggingSet": "Journalisation debug captcha {value}.",
   "captcha.success.debugRunStarted":
-    "Workflow de verification captcha demarre pour <@{memberId}>.",
-  "captcha.success.kickOnFailureSet": "Expulsion en cas d'echec {value}.",
+    "Workflow de vérification captcha démarré pour <@{memberId}>.",
+  "captcha.success.kickOnFailureSet": "Expulsion en cas d'échec {value}.",
   "captcha.success.maxAttemptsSet":
-    "Seuil d'alerte essais defini sur **{value}**.",
+    "Seuil d'alerte essais défini sur **{value}**.",
   "captcha.success.noiseLevelSet":
-    "Niveau de bruit captcha defini sur **{value}**.",
+    "Niveau de bruit captcha défini sur **{value}**.",
   "captcha.success.resetAll":
-    "Tous les parametres captcha ont ete reinitialises sur les valeurs de secours.",
+    "Tous les paramètres captcha ont ete réinitialisés sur les valeurs de secours.",
   "captcha.success.resetSingle":
-    "Le parametre captcha **{option}** a ete reinitialise sur son comportement par defaut de secours.",
-  "captcha.success.timeoutSet": "Delai defini sur **{value}** secondes.",
-  "captcha.success.verifiedRoleSet": "Role verifie defini sur <@&{roleId}>.",
+    "Le paramètre captcha **{option}** a été réinitialisé sur son comportement par défaut de secours.",
+  "captcha.success.timeoutSet": "Délai défini sur **{value}** secondes.",
+  "captcha.success.verifiedRoleSet": "Rôle vérifié défini sur <@&{roleId}>.",
 
   "captcha.success.workflowAlreadyActive":
-    "Impossible de demarrer la verification captcha : une session est deja active pour ce membre.",
+    "Impossible de démarrér la vérification captcha : une session est déjà active pour ce membre.",
   "commands.captcha.description":
-    "Gerer les parametres de verification captcha",
+    "Gérer les paramètres de vérification captcha",
   "commands.captcha.groupSet.description":
-    "Definir les options de configuration du captcha",
+    "Définir les options de configuration du captcha",
   "commands.captcha.option.attemptAlertChannel.description":
     "Salon recevant les alertes de tentatives captcha",
   "commands.captcha.option.category.description":
-    "Categorie des salons captcha temporaires",
-  "commands.captcha.option.categoryId.description": "ID du salon categorie",
+    "Catégorie des salons captcha temporaires",
+  "commands.captcha.option.categoryId.description": "ID du salon catégorie",
   "commands.captcha.option.codeLengthValue.description":
     "Longueur du code captcha",
   "commands.captcha.option.enabledAdminAccess.description":
-    "Activer ou desactiver l'acces administrateur",
+    "Activer ou désactiver l'accès administrateur",
   "commands.captcha.option.enabledCaseSensitive.description":
-    "Activer ou desactiver la sensibilite a la casse",
+    "Activer ou désactiver la sensibilité à la casse",
   "commands.captcha.option.enabledDebugLogging.description":
-    "Activer ou desactiver les journaux de debug",
+    "Activer ou désactiver les journaux de debug",
   "commands.captcha.option.enabledKick.description":
-    "Activer ou desactiver l'expulsion en cas d'echec",
+    "Activer ou désactiver l'expulsion en cas d'échec",
   "commands.captcha.option.format.description":
     "Utiliser {username}, {userid}, {suffix}, {prefix}",
   "commands.captcha.option.maxAttemptsValue.description":
-    "Nombre d'essais rates avant alerte administrateur",
+    "Nombre d'essais ratés avant alerte administrateur",
   "commands.captcha.option.member.description":
-    "Membre pour lequel lancer la verification captcha",
+    "Membre pour lequel lancer la vérification captcha",
   "commands.captcha.option.noiseLevelValue.description":
-    "Niveau de bruit de 0 (aucun) a 100 (eleve)",
+    "Niveau de bruit de 0 (aucun) à 100 (eleve)",
   "commands.captcha.option.resetSetting.description":
-    "Parametre a reinitialiser",
-  "commands.captcha.option.role.description": "Role a attribuer",
-  "commands.captcha.option.timeoutValue.description": "Delai en secondes",
+    "Paramètre à réinitialiser",
+  "commands.captcha.option.role.description": "Rôle à attribuer",
+  "commands.captcha.option.timeoutValue.description": "Délai en secondes",
   "commands.captcha.option.type.description": "Type de captcha",
-  "commands.captcha.resetChoice.all": "Tous les parametres",
-  "commands.captcha.resetChoice.allowAdminAccess": "Acces administrateur",
+  "commands.captcha.resetChoice.all": "Tous les paramètres",
+  "commands.captcha.resetChoice.allowAdminAccess": "Accès administrateur",
   "commands.captcha.resetChoice.attemptAlertChannel": "Salon d'alerte essais",
-  "commands.captcha.resetChoice.captchaCategory": "Categorie captcha",
+  "commands.captcha.resetChoice.captchaCategory": "Catégorie captcha",
   "commands.captcha.resetChoice.captchaType": "Type de captcha",
-  "commands.captcha.resetChoice.caseSensitive": "Sensibilite a la casse",
+  "commands.captcha.resetChoice.caseSensitive": "Sensibilité à la casse",
 
   "commands.captcha.resetChoice.channelNameFormat": "Format du nom de salon",
   "commands.captcha.resetChoice.codeLength": "Longueur du code",
   "commands.captcha.resetChoice.debugLogging": "Journalisation debug",
-  "commands.captcha.resetChoice.kickOnFailure": "Expulsion en cas d'echec",
+  "commands.captcha.resetChoice.kickOnFailure": "Expulsion en cas d'échec",
   "commands.captcha.resetChoice.maxAttempts": "Seuil d'alerte essais",
   "commands.captcha.resetChoice.noiseLevel": "Niveau de bruit",
-  "commands.captcha.resetChoice.timeoutSeconds": "Delai (secondes)",
-  "commands.captcha.resetChoice.verifiedRole": "Role verifie",
+  "commands.captcha.resetChoice.timeoutSeconds": "Délai (secondes)",
+  "commands.captcha.resetChoice.verifiedRole": "Rôle vérifié",
   "commands.captcha.sub.allowAdminAccess.description":
-    "Activer ou desactiver la visibilite admin des salons captcha",
+    "Activer ou désactiver la visibilite admin des salons captcha",
   "commands.captcha.sub.attemptAlertChannel.description":
-    "Definir le salon de notification des tentatives captcha",
+    "Définir le salon de notification des tentatives captcha",
   "commands.captcha.sub.captchaType.description":
-    "Definir le type de challenge captcha",
+    "Définir le type de challenge captcha",
   "commands.captcha.sub.caseSensitive.description":
-    "Activer ou desactiver la validation sensible a la casse",
+    "Activer ou désactiver la validation sensible à la casse",
   "commands.captcha.sub.category.description":
-    "Definir la categorie utilisee pour les salons captcha",
+    "Définir la catégorie utilisée pour les salons captcha",
   "commands.captcha.sub.categoryById.description":
-    "Definir la categorie avec un ID de salon categorie",
+    "Définir la catégorie avec un ID de salon catégorie",
   "commands.captcha.sub.channelNameFormat.description":
-    "Definir le format de nom des salons captcha temporaires",
+    "Définir le format de nom des salons captcha temporaires",
   "commands.captcha.sub.codeLength.description":
-    "Definir la longueur du code captcha",
+    "Définir la longueur du code captcha",
 
   "commands.captcha.sub.debugLogging.description":
-    "Activer ou desactiver les logs de debug captcha",
+    "Activer ou désactiver les logs de debug captcha",
   "commands.captcha.sub.debugRun.description":
-    "Developpement uniquement : declencher le workflow captcha pour un membre existant",
+    "Développement uniquement : déclencher le workflow captcha pour un membre existant",
   "commands.captcha.sub.kickOnFailure.description":
-    "Activer ou desactiver l'expulsion des utilisateurs qui echouent",
+    "Activer ou désactiver l'expulsion des utilisateurs qui échouent",
   "commands.captcha.sub.maxAttempts.description":
-    "Definir le seuil d'essais rates avant alerte admin",
+    "Définir le seuil d'essais ratés avant alerte admin",
   "commands.captcha.sub.noiseLevel.description":
-    "Definir le niveau de bruit captcha pour les leurres et traces",
+    "Définir le niveau de bruit captcha pour les leurres et traces",
   "commands.captcha.sub.reset.description":
-    "Reinitialiser un ou plusieurs parametres captcha sur les valeurs de secours",
+    "Réinitialiser un ou plusieurs paramètres captcha sur les valeurs de secours",
   "commands.captcha.sub.show.description":
-    "Afficher les parametres captcha effectifs pour ce serveur",
+    "Afficher les paramètres captcha effectifs pour ce serveur",
   "commands.captcha.sub.timeout.description":
-    "Definir le delai captcha en secondes",
+    "Définir le délai captcha en secondes",
   "commands.captcha.sub.verifiedRole.description":
-    "Definir le role attribue apres un captcha reussi",
+    "Définir le rôle attribué après un captcha réussi",
+  "commands.deleteCategoryChannels.description":
+    "Suppression avancée de messages/salons/catégories avec ciblage",
+  "commands.deleteCategoryChannels.option.category.description":
+    "Catégorie dont tous les salons enfants seront supprimés",
+  "commands.deleteCategoryChannels.option.limit.description":
+    "Limite maximale d'éléments à supprimer en mode limité",
+  "commands.deleteCategoryChannels.option.mode.description":
+    "Choisir suppression complète ou limitée",
+  "commands.deleteCategoryChannels.option.scope.description":
+    "Choisir quoi supprimer: messages, salons, catégories ou tout",
+  "commands.deleteCategoryChannels.option.subject.description":
+    "Sujet ciblé (ID, mention, nom de salon, etc.) selon le type choisi",
+  "commands.deleteCategoryChannels.option.subjectType.description":
+    "Choisir comment cibler la suppression",
+  "commands.deleteCategoryChannels.sub.advanced.description":
+    "Sous-commande avancée de suppression multi-cible",
   "commands.hello.description":
     "Envoyer un message de salutation de Terryscord",
   "commands.hello.onlineMessage":
     "Bonjour depuis Terryscord. Le bot est en ligne.",
-  "common.disabled": "desactive",
-  "common.enabled": "active",
-  "common.notConfigured": "non configure",
+  "common.disabled": "désactivé",
+  "common.enabled": "activé",
+  "common.notConfigured": "non configuré",
   "interaction.commandUnavailable":
     "Cette commande n'est pas disponible pour le moment.",
   "interaction.executionError":
     "Une erreur inattendue est survenue pendant le traitement de cette commande.",
 
   "verification.audit.cleanupOrphaned":
-    "Nettoyage d'un salon captcha orphelin de verification",
+    "Nettoyage d'un salon captcha orphelin de vérification",
   "verification.audit.createReason":
-    "Verification captcha ({source}) pour {memberTag}",
+    "Vérification captcha ({source}) pour {memberTag}",
   "verification.audit.internalError":
-    "La verification captcha a echoue suite a une erreur interne",
+    "La vérification captcha a échoué suite à une erreur interne",
   "verification.audit.kickReason":
-    "{failureMessage} Essais utilises : {attemptsUsed}.",
+    "{failureMessage} Essais utilisés : {attemptsUsed}.",
   "verification.audit.removeStaleBeforeCreate":
-    "Suppression d'un ancien salon de verification captcha avant d'en creer un nouveau",
+    "Suppression d'un ancien salon de vérification captcha avant d'en créer un nouveau",
   "verification.audit.roleAddReason":
-    "Verification captcha terminee avec succes",
-  "verification.audit.verificationComplete": "Verification captcha terminee",
-  "verification.channelName.prefix": "verification",
-  "verification.embed.defaultTitle": "Verification",
+    "Vérification captcha terminée avec succès",
+  "verification.audit.verificationComplete": "Vérification captcha terminée",
+  "verification.channelName.prefix": "vérification",
+  "verification.embed.defaultTitle": "Vérification",
   "verification.image.description": "Challenge captcha",
   "verification.message.attemptAlertThresholdReached":
     "<@{memberId}> a atteint **{attemptsUsed}** erreurs captcha (seuil: {threshold}) dans <#{verificationChannelId}>.",
   "verification.message.attemptAlertTitle": "Alerte captcha",
   "verification.message.deletedVerifiedRole":
-    "Verification terminee, mais le role verifie configure n'existe plus. Merci de contacter un administrateur.",
+    "Vérification terminée, mais le rôle vérifié configuré n'existe plus. Merci de contacter un administrateur.",
   "verification.message.failureDefault":
-    "La verification s'est terminee avant d'etre completee.",
+    "La vérification s'est terminée avant d'être complétée.",
   "verification.message.failureLimit":
-    "Verification echouee car vous avez depasse le nombre maximal d'essais.",
+    "Vérification échouée car vous avez depasse le nombre maximal d'essais.",
   "verification.message.failureTime":
-    "Verification expiree avant qu'une reponse captcha correcte ne soit fournie.",
+    "Vérification expirée avant qu'une réponse captcha correcte ne soit fournie.",
   "verification.message.internalError":
-    "La verification n'a pas pu etre terminee a cause d'une erreur interne. Merci de contacter un administrateur.",
+    "La vérification n'a pas pu être terminée à cause d'une erreur interne. Merci de contacter un administrateur.",
   "verification.message.missingVerifiedRole":
-    "Verification terminee, mais aucun role verifie n'est configure. Demandez a un administrateur d'executer `/captcha set verified-role`.",
+    "Vérification terminée, mais aucun rôle vérifié n'est configuré. Demandez à un administrateur d'executer `/captcha set verified-role`.",
   "verification.message.retryPrompt":
-    "Reponse incorrecte <@{memberId}>. Voici un nouveau captcha a resoudre.",
+    "Réponse incorrecte <@{memberId}>. Voici un nouveau captcha à résoudre.",
   "verification.message.retryTitle": "Nouvelle tentative",
   "verification.message.roleAssignFailed":
-    "Verification terminee, mais je n'ai pas pu attribuer le role configure. Merci de contacter un administrateur.",
+    "Vérification terminée, mais je n'ai pas pu attribuer le rôle configuré. Merci de contacter un administrateur.",
   "verification.message.roleAssigned":
-    "Verification terminee. Vous disposez maintenant du role <@&{roleId}>.",
+    "Vérification terminée. Vous disposez maintenant du rôle <@&{roleId}>.",
   "verification.message.welcome":
-    "Bienvenue <@{memberId}>. Completez la verification ci-dessous pour acceder au serveur.",
+    "Bienvenue <@{memberId}>. Completez la vérification ci-dessous pour acceder au serveur.",
   "verification.message.welcomeTitle": "Bienvenue",
 } as const;
 

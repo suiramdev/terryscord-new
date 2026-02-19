@@ -1,6 +1,5 @@
 import { env } from "@terryscord/env/bot";
-
-import { logger } from "@/logger";
+import { log } from "evlog";
 
 interface PrismaClientLike {
   $queryRaw: (
@@ -24,7 +23,10 @@ const disconnectPrismaClient = async (
   try {
     await prisma.$disconnect();
   } catch (error: unknown) {
-    logger.warn({ err: error }, "Failed to disconnect Prisma client");
+    log.warn({
+      err: error,
+      message: "Failed to disconnect Prisma client",
+    });
   }
 };
 
@@ -40,13 +42,26 @@ const runPrismaHealthQuery = async (): Promise<void> => {
 
 export const runDatabaseHealthCheck = async (): Promise<void> => {
   if (!env.BOT_DATABASE_HEALTHCHECK_ON_READY) {
+    log.info({
+      databaseHealthCheckEnabled: env.BOT_DATABASE_HEALTHCHECK_ON_READY,
+      message: "Skipped Prisma database health check",
+    });
     return;
   }
 
+  const startedAt = Date.now();
+
   try {
     await runPrismaHealthQuery();
-    logger.info("Prisma database health check succeeded");
+    log.info({
+      durationMs: Date.now() - startedAt,
+      message: "Prisma database health check succeeded",
+    });
   } catch (error: unknown) {
-    logger.error({ err: error }, "Prisma database health check failed");
+    log.error({
+      durationMs: Date.now() - startedAt,
+      err: error,
+      message: "Prisma database health check failed",
+    });
   }
 };

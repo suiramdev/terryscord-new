@@ -1,7 +1,6 @@
 import { ChannelType } from "discord.js";
 import type { Guild } from "discord.js";
-
-import { logger } from "@/logger";
+import { log } from "evlog";
 
 export const CAPTCHA_TYPE_VALUES = ["image_text"] as const;
 export type CaptchaType = (typeof CAPTCHA_TYPE_VALUES)[number];
@@ -406,13 +405,11 @@ export const getStoredGuildCaptchaSettings = async (
       },
     });
   } catch (error: unknown) {
-    logger.error(
-      {
-        err: error,
-        guildId,
-      },
-      "Failed to fetch guild captcha settings"
-    );
+    log.error({
+      err: error,
+      guildId,
+      message: "Failed to fetch guild captcha settings",
+    });
 
     return null;
   }
@@ -474,14 +471,12 @@ export const upsertGuildCaptchaSettings = async ({
       },
     });
   } catch (error: unknown) {
-    logger.error(
-      {
-        err: error,
-        guildId,
-        patch: upsertPatch,
-      },
-      "Failed to upsert guild captcha settings"
-    );
+    log.error({
+      err: error,
+      guildId,
+      message: "Failed to upsert guild captcha settings",
+      patch: upsertPatch,
+    });
 
     throw new Error("Unable to save guild captcha settings.", {
       cause: error,
