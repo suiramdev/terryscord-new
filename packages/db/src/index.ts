@@ -1,6 +1,8 @@
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@terryscord/db/prisma/generated/client";
-import { env } from "@terryscord/env/server";
+import { env } from "@terryscord/env/db";
+
+// oxlint-disable-next-line import/no-relative-parent-imports -- avoid self-referential package import during module initialization
+import { PrismaClient } from "../prisma/generated/client";
 
 const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });

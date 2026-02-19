@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./server": "./src/server.ts",
+    "./db": "./src/db.ts",
     "./bot": "./src/bot.ts",
     "./web": "./src/web.ts"
   },

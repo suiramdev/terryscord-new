@@ -2,6 +2,7 @@ import type { CaptchaGenerator as CaptchaGeneratorType } from "captcha-canvas";
 import {
   AttachmentBuilder,
   ChannelType,
+  EmbedBuilder,
   PermissionFlagsBits,
 } from "discord.js";
 import type {
@@ -9,6 +10,7 @@ import type {
   Guild,
   GuildBasedChannel,
   GuildMember,
+  MessageCreateOptions,
   OverwriteResolvable,
   Role,
   TextChannel,
@@ -26,9 +28,16 @@ const CAPTCHA_CASE_INSENSITIVE_CHARACTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const CAPTCHA_CASE_SENSITIVE_CHARACTERS =
   "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 const CAPTCHA_TEXT_COLORS = ["#0f172a", "#1e293b", "#334155", "#475569"];
+const CAPTCHA_BACKGROUND_COLOR_START = "#f8fafc";
+const CAPTCHA_BACKGROUND_COLOR_END = "#e2e8f0";
+const CAPTCHA_BACKGROUND_ACCENT_COLOR = "#94a3b8";
 const CHANNEL_DELETE_DELAY_MS = 2000;
 const CHANNEL_NAME_DEFAULT_PREFIX = "verify";
 const FALLBACK_CAPTCHA_CHARACTER = "A";
+const VERIFICATION_EMBED_COLOR_INFO = 2_484_063;
+const VERIFICATION_EMBED_COLOR_SUCCESS = 2_212_308;
+const VERIFICATION_EMBED_COLOR_WARNING = 15_865_867;
+const VERIFICATION_EMBED_COLOR_ERROR = 15_583_145;
 const UINT32_MAX_PLUS_ONE = 0x1_00_00_00_00;
 const MESSAGE_READ_PERMISSIONS = [
   PermissionFlagsBits.ReadMessageHistory,
@@ -158,6 +167,44 @@ const generateSecureCaptchaCode = ({
 const toNoiseLevelRatio = (noiseLevel: number): number =>
   Math.max(0, Math.min(100, noiseLevel)) / 100;
 
+const createCaptchaBackgroundBuffer = (noiseLevelRatio: number): Buffer => {
+  const accentOpacity = (0.08 + noiseLevelRatio * 0.14).toFixed(2);
+  const stripeOpacity = (0.05 + noiseLevelRatio * 0.12).toFixed(2);
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${CAPTCHA_IMAGE_WIDTH}" height="${CAPTCHA_IMAGE_HEIGHT}" viewBox="0 0 ${CAPTCHA_IMAGE_WIDTH} ${CAPTCHA_IMAGE_HEIGHT}">
+<defs>
+<linearGradient id="captcha-gradient" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0%" stop-color="${CAPTCHA_BACKGROUND_COLOR_START}" />
+<stop offset="100%" stop-color="${CAPTCHA_BACKGROUND_COLOR_END}" />
+</linearGradient>
+<pattern id="captcha-stripes" patternUnits="userSpaceOnUse" width="20" height="20" patternTransform="rotate(20)">
+<line x1="0" y1="0" x2="0" y2="20" stroke="${CAPTCHA_BACKGROUND_ACCENT_COLOR}" stroke-width="1" />
+</pattern>
+</defs>
+<rect width="100%" height="100%" fill="url(#captcha-gradient)" />
+<rect width="100%" height="100%" fill="url(#captcha-stripes)" opacity="${stripeOpacity}" />
+<circle cx="46" cy="36" r="28" fill="${CAPTCHA_BACKGROUND_ACCENT_COLOR}" opacity="${accentOpacity}" />
+<circle cx="312" cy="104" r="36" fill="${CAPTCHA_BACKGROUND_ACCENT_COLOR}" opacity="${accentOpacity}" />
+</svg>`;
+
+  return Buffer.from(svg, "utf8");
+};
+
+const createVerificationEmbed = ({
+  color,
+  description,
+  title = "Verification",
+}: {
+  color: number;
+  description: string;
+  title?: string;
+}): EmbedBuilder =>
+  new EmbedBuilder()
+    .setColor(color)
+    .setDescription(description)
+    .setTimestamp()
+    .setTitle(title);
+
 const createCaptchaChallenge = async ({
   settings,
 }: {
@@ -174,6 +221,7 @@ const createCaptchaChallenge = async ({
     height: CAPTCHA_IMAGE_HEIGHT,
     width: CAPTCHA_IMAGE_WIDTH,
   })
+    .setBackground(createCaptchaBackgroundBuffer(noiseLevelRatio))
     .setCaptcha({
       colors: CAPTCHA_TEXT_COLORS,
       rotate: 12 + Math.round(28 * noiseLevelRatio),
@@ -205,13 +253,13 @@ const createCaptchaChallenge = async ({
 
 const sendChannelMessageSafely = async ({
   channel,
-  content,
+  options,
 }: {
   channel: TextChannel;
-  content: string;
+  options: MessageCreateOptions;
 }): Promise<void> => {
   try {
-    await channel.send({ content });
+    await channel.send(options);
   } catch (error: unknown) {
     logger.warn(
       {
@@ -505,8 +553,15 @@ const sendMissingVerifiedRoleMessage = async ({
 }): Promise<void> => {
   await sendChannelMessageSafely({
     channel,
-    content:
-      "Captcha solved, but no verified role is configured. Ask an administrator to run `/captcha set verified-role`.",
+    options: {
+      embeds: [
+        createVerificationEmbed({
+          color: VERIFICATION_EMBED_COLOR_WARNING,
+          description:
+            "Verification completed, but no verified role is configured. Ask an administrator to run `/captcha set verified-role`.",
+        }),
+      ],
+    },
   });
 };
 
@@ -517,8 +572,15 @@ const sendDeletedVerifiedRoleMessage = async ({
 }): Promise<void> => {
   await sendChannelMessageSafely({
     channel,
-    content:
-      "Captcha solved, but the configured verified role no longer exists. Please contact an administrator.",
+    options: {
+      embeds: [
+        createVerificationEmbed({
+          color: VERIFICATION_EMBED_COLOR_WARNING,
+          description:
+            "Verification completed, but the configured verified role no longer exists. Please contact an administrator.",
+        }),
+      ],
+    },
   });
 };
 
@@ -540,7 +602,14 @@ const assignVerifiedRoleWithFeedback = async ({
     );
     await sendChannelMessageSafely({
       channel,
-      content: `Verification complete. You now have the <@&${role.id}> role.`,
+      options: {
+        embeds: [
+          createVerificationEmbed({
+            color: VERIFICATION_EMBED_COLOR_SUCCESS,
+            description: `Verification complete. You now have the <@&${role.id}> role.`,
+          }),
+        ],
+      },
     });
 
     logCaptchaDebug({
@@ -565,8 +634,15 @@ const assignVerifiedRoleWithFeedback = async ({
 
     await sendChannelMessageSafely({
       channel,
-      content:
-        "Captcha solved, but I could not assign the configured role. Please contact an administrator.",
+      options: {
+        embeds: [
+          createVerificationEmbed({
+            color: VERIFICATION_EMBED_COLOR_ERROR,
+            description:
+              "Verification completed, but I could not assign the configured role. Please contact an administrator.",
+          }),
+        ],
+      },
     });
 
     logCaptchaDebug({
@@ -684,7 +760,14 @@ const handleFailedVerification = async ({
   const failureMessage = resolveFailureMessage(reason);
   await sendChannelMessageSafely({
     channel,
-    content: failureMessage,
+    options: {
+      embeds: [
+        createVerificationEmbed({
+          color: VERIFICATION_EMBED_COLOR_ERROR,
+          description: failureMessage,
+        }),
+      ],
+    },
   });
 
   if (!settings.kickOnFailure) {
@@ -697,23 +780,16 @@ const handleFailedVerification = async ({
   });
 };
 
-const buildVerificationPrompt = ({
+const buildVerificationPromptEmbed = ({
   member,
-  settings,
 }: {
   member: GuildMember;
-  settings: GuildCaptchaSettings;
-}): string =>
-  [
-    `Welcome <@${member.id}>.`,
-    "Please solve the captcha below to access the server.",
-    `Attempts: **${settings.maxAttempts}**`,
-    `Time limit: **${settings.timeoutSeconds} seconds**`,
-    `Captcha type: **${settings.captchaType}**`,
-    `Noise level: **${settings.captchaNoiseLevel}**`,
-    `Case sensitive: **${settings.captchaCaseSensitive ? "enabled" : "disabled"}**`,
-    "Reply in this channel with the captcha text from the image.",
-  ].join("\n");
+}): EmbedBuilder =>
+  createVerificationEmbed({
+    color: VERIFICATION_EMBED_COLOR_INFO,
+    description: `Welcome <@${member.id}>. Complete verification below to access the server.`,
+    title: "Welcome",
+  }).setImage(`attachment://${CAPTCHA_IMAGE_FILE_NAME}`);
 
 const shouldDeleteOrphanedChannel = (
   channel: GuildBasedChannel,
@@ -782,7 +858,14 @@ const notifyIncorrectAttempt = async ({
 
   await sendChannelMessageSafely({
     channel,
-    content: `Incorrect captcha. ${attemptsRemaining} attempt${attemptsRemaining === 1 ? "" : "s"} remaining.`,
+    options: {
+      embeds: [
+        createVerificationEmbed({
+          color: VERIFICATION_EMBED_COLOR_WARNING,
+          description: `Incorrect response. ${attemptsRemaining} attempt${attemptsRemaining === 1 ? "" : "s"} remaining.`,
+        }),
+      ],
+    },
   });
 };
 
@@ -848,21 +931,21 @@ const sendCaptchaChallenge = async ({
   captchaAttachment,
   channel,
   member,
-  settings,
 }: {
   captchaAttachment: AttachmentBuilder;
   channel: TextChannel;
   member: GuildMember;
-  settings: GuildCaptchaSettings;
 }): Promise<void> => {
-  const content = buildVerificationPrompt({
+  const embed = buildVerificationPromptEmbed({
     member,
-    settings,
   });
 
-  await channel.send({
-    content,
-    files: [captchaAttachment],
+  await sendChannelMessageSafely({
+    channel,
+    options: {
+      embeds: [embed],
+      files: [captchaAttachment],
+    },
   });
 };
 
@@ -953,7 +1036,6 @@ const runCaptchaChallenge = async ({
     captchaAttachment: captchaChallenge.attachment,
     channel,
     member,
-    settings,
   });
 
   const collector = createCaptchaCollector({
@@ -1002,8 +1084,15 @@ const handleVerificationWorkflowError = async ({
 
   await sendChannelMessageSafely({
     channel,
-    content:
-      "Captcha verification could not be completed due to an internal error. Please contact an administrator.",
+    options: {
+      embeds: [
+        createVerificationEmbed({
+          color: VERIFICATION_EMBED_COLOR_ERROR,
+          description:
+            "Verification could not be completed due to an internal error. Please contact an administrator.",
+        }),
+      ],
+    },
   });
   await waitForMilliseconds(CHANNEL_DELETE_DELAY_MS);
   await deleteChannelSafely({

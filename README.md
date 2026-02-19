@@ -32,6 +32,7 @@ bun install
 1. Create a bot env file from `apps/discord-bot/.env.example`.
 2. Set `DISCORD_BOT_TOKEN` and `DISCORD_CLIENT_ID`.
 3. (Recommended for development) set `DISCORD_GUILD_ID` for fast guild-scoped command registration.
+4. Set `BOT_DATABASE_URL` (or `DATABASE_URL`) so captcha settings and verification can access Prisma.
 
 Register slash commands and run the bot:
 
