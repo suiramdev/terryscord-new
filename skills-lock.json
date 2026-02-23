@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "create-evlog-adapter": {
+      "source": "hugorcd/evlog",
+      "sourceType": "github",
+      "computedHash": "f2d3a04c43a5db91cf632f8c3256824887423e189311e06b81e954905af908bd"
+    },
+    "create-evlog-enricher": {
+      "source": "hugorcd/evlog",
+      "sourceType": "github",
+      "computedHash": "49b8d8cf918a3f7232b9799f28fb67acde61fda20d1a6307f550fc4b7a729c3d"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "063a0e6448123cd359ad0044cc46b0e490cc7964d45ef4bb9fd842bd2ffbca67"
+    },
+    "review-logging-patterns": {
+      "source": "hugorcd/evlog",
+      "sourceType": "github",
+      "computedHash": "c4469d4ea1ff92c8be6bcfdb066b4465966caee05df02529155e5bcb8c15c01e"
+    },
+    "turborepo": {
+      "source": "vercel/turborepo",
+      "sourceType": "github",
+      "computedHash": "1e8cc3dbfb32760399f8a88d49c4cbf8e4e111132432759cfce1459d95101bbb"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "a6a44d5498f7e8f68289902f3dedfc6f38ae0cee1e96527c80724cf27f727c2a"
+    }
+  }
+}
