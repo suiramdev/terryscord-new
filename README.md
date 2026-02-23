@@ -102,39 +102,36 @@ terryscord/
 - `bun run db:studio`: Open database studio UI
 - `bun run check`: Run Oxlint and Oxfmt
 
-## Docker Deployment (Server Workspace)
+## Docker Deployment (All Apps)
 
-This repo includes a production Dockerfile at `apps/server/Dockerfile` that follows Turborepo's `prune --docker` pattern.
+Each app now has its own production Dockerfile:
 
-### 1) Create a pruned monorepo
+- `apps/server/Dockerfile`
+- `apps/web/Dockerfile`
+- `apps/discord-bot/Dockerfile`
 
-You can run this locally to inspect what Docker will use:
+All Dockerfiles use Turborepo's `prune --docker` pattern:
+
+- `out/json` - lockfile + package manifests (fast dependency install layer)
+- `out/full` - only source files needed for the selected workspace build
+
+You can inspect a pruned workspace locally (example):
 
 ```bash
 bun x turbo prune server --docker
 ```
 
-This writes:
-
-- `out/json` - only `package.json` files and lockfile for fast dependency install layers
-- `out/full` - source files needed to build the `server` workspace
-
-### 2) Build an optimized image
-
-Build from the repo root:
+### Build Images
 
 ```bash
 docker build -f apps/server/Dockerfile -t terryscord-server .
+docker build -f apps/web/Dockerfile -t terryscord-web .
+docker build -f apps/discord-bot/Dockerfile -t terryscord-discord-bot .
 ```
 
-The Dockerfile uses multi-stage builds:
+### Run Containers
 
-- `pruner`: runs `turbo prune server --docker`
-- `installer`: installs dependencies from `out/json`
-- `builder`: runs `turbo run build --filter=server...`
-- `runner`: copies production dependencies + built server output only
-
-Run the container:
+Server:
 
 ```bash
 docker run --rm -p 3000:3000 --env-file apps/server/.env terryscord-server
@@ -142,17 +139,31 @@ docker run --rm -p 3000:3000 --env-file apps/server/.env terryscord-server
 
 If `DATABASE_URL` points to `localhost`, update it for container networking (for example, `host.docker.internal` on macOS/Windows, or a Compose service name).
 
-### 3) Enable Turborepo Remote Cache for Docker builds
+Web:
 
-Pass cache credentials at build time:
+```bash
+docker run --rm -p 3001:3001 --env-file apps/web/.env terryscord-web
+```
+
+Discord bot:
+
+```bash
+docker run --rm --env-file apps/discord-bot/.env terryscord-discord-bot
+```
+
+The bot is a worker process and does not expose an HTTP port.
+
+### Enable Turborepo Remote Cache for Docker builds
+
+Pass cache credentials when building any image:
 
 ```bash
 docker build \
-  -f apps/server/Dockerfile \
-  -t terryscord-server \
+  -f apps/discord-bot/Dockerfile \
+  -t terryscord-discord-bot \
   --build-arg TURBO_TEAM=your-team-slug \
   --build-arg TURBO_TOKEN=your-turbo-token \
   .
 ```
 
-When `TURBO_TEAM` and `TURBO_TOKEN` are set, the `builder` stage can pull/push cached build artifacts, which speeds up repeated CI or local image builds.
+When `TURBO_TEAM` and `TURBO_TOKEN` are set, the builder stage can pull/push cached build artifacts, which speeds up repeated CI or local image builds.
