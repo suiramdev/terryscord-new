@@ -85,7 +85,13 @@ interface GuildCaptchaSettingsDelegate {
   upsert: (args: unknown) => Promise<GuildCaptchaSettingsRecord>;
 }
 
+interface GuildDelegate {
+  upsert: (args: unknown) => Promise<unknown>;
+}
+
 interface CaptchaSettingsPrismaClient {
+  $executeRawUnsafe: (query: string) => Promise<number>;
+  guild: GuildDelegate;
   guildVerificationSetting: GuildCaptchaSettingsDelegate;
 }
 
@@ -106,6 +112,75 @@ const DEFAULT_GUILD_CAPTCHA_SETTINGS: GuildCaptchaSettings = {
 };
 
 let prismaClientPromise: Promise<CaptchaSettingsPrismaClient> | null = null;
+let ensureCaptchaPersistenceSchemaPromise: Promise<void> | null = null;
+
+const ensureCaptchaPersistenceSchema = async (
+  prisma: CaptchaSettingsPrismaClient
+): Promise<void> => {
+  if (ensureCaptchaPersistenceSchemaPromise) {
+    return await ensureCaptchaPersistenceSchemaPromise;
+  }
+
+  ensureCaptchaPersistenceSchemaPromise = (async (): Promise<void> => {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "guild" (
+        "id" TEXT NOT NULL,
+        "name" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "guild_pkey" PRIMARY KEY ("id")
+      )
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "guild_verification_setting" (
+        "guildId" TEXT NOT NULL,
+        "verifiedRoleId" TEXT,
+        "captchaCategoryId" TEXT,
+        "attemptAlertChannelId" TEXT,
+        "captchaCaseSensitive" BOOLEAN,
+        "captchaNoiseLevel" INTEGER,
+        "maxAttempts" INTEGER,
+        "timeoutSeconds" INTEGER,
+        "kickOnFailure" BOOLEAN,
+        "allowAdminAccess" BOOLEAN,
+        "channelNameFormat" TEXT,
+        "captchaType" TEXT,
+        "codeLength" INTEGER,
+        "debugLogging" BOOLEAN,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "guild_verification_setting_pkey" PRIMARY KEY ("guildId")
+      )
+    `);
+  })();
+
+  try {
+    await ensureCaptchaPersistenceSchemaPromise;
+  } catch (error: unknown) {
+    ensureCaptchaPersistenceSchemaPromise = null;
+    throw error;
+  }
+};
+
+const ensureGuildRow = async ({
+  guildId,
+  prisma,
+}: {
+  guildId: string;
+  prisma: CaptchaSettingsPrismaClient;
+}): Promise<void> => {
+  await ensureCaptchaPersistenceSchema(prisma);
+  await prisma.guild.upsert({
+    create: {
+      id: guildId,
+    },
+    update: {},
+    where: {
+      id: guildId,
+    },
+  });
+};
 
 const loadPrismaClient = (): Promise<CaptchaSettingsPrismaClient> => {
   if (prismaClientPromise) {
@@ -399,6 +474,7 @@ export const getStoredGuildCaptchaSettings = async (
 ): Promise<GuildCaptchaSettingsRecord | null> => {
   try {
     const prisma = await loadPrismaClient();
+    await ensureGuildRow({ guildId, prisma });
     return prisma.guildVerificationSetting.findUnique({
       where: {
         guildId,
@@ -459,6 +535,7 @@ export const upsertGuildCaptchaSettings = async ({
 
   try {
     const prisma = await loadPrismaClient();
+    await ensureGuildRow({ guildId, prisma });
 
     await prisma.guildVerificationSetting.upsert({
       create: {

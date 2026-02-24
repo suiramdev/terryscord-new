@@ -1,3 +1,12 @@
+model Guild {
+  id        String   @id
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("guild")
+}
+
 model GuildVerificationSetting {
   guildId            String   @id
   verifiedRoleId     String?
