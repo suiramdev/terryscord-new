@@ -1,5 +1,6 @@
 import { env } from "@terryscord/env/bot";
 import {
+  AttachmentBuilder,
   ChannelType,
   MessageFlags,
   PermissionFlagsBits,
@@ -10,6 +11,7 @@ import type {
   ChatInputCommandInteraction,
   Guild,
   GuildMember,
+  InteractionReplyOptions,
   Role,
   TextChannel,
 } from "discord.js";
@@ -22,6 +24,7 @@ import {
   triggerCaptchaVerificationForUnverifiedMembers,
 } from "@/discord/events/guild-member-add";
 import { t } from "@/i18n";
+import { generateCaptchaImage } from "@/integrations/captcha-image";
 import {
   CAPTCHA_LIMITS,
   CAPTCHA_TYPE_VALUES,
@@ -38,6 +41,7 @@ import type { SlashCommand } from "./types";
 
 const ADMINISTRATOR_PERMISSION = PermissionFlagsBits.Administrator;
 const SET_GROUP_NAME = "set";
+const CAPTCHA_PREVIEW_IMAGE_FILE_NAME = "captcha-preview.png";
 
 const RESET_OPTIONS = [
   "attempt-alert-channel",
@@ -118,6 +122,26 @@ const replyEphemeral = async ({
   });
 };
 
+const replyEphemeralOptions = async ({
+  interaction,
+  options,
+}: {
+  interaction: ChatInputCommandInteraction;
+  options: InteractionReplyOptions;
+}): Promise<void> => {
+  const payload: InteractionReplyOptions = {
+    ...options,
+    flags: MessageFlags.Ephemeral,
+  };
+
+  if (interaction.deferred || interaction.replied) {
+    await interaction.followUp(payload);
+    return;
+  }
+
+  await interaction.reply(payload);
+};
+
 const createCommandError = (message: string): CommandError => ({
   message,
   type: "error",
@@ -181,12 +205,96 @@ const savePatch = async ({
   }
 };
 
+const replySaveFailed = async ({
+  interaction,
+}: {
+  interaction: ChatInputCommandInteraction;
+}): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
+  await replyEphemeral({
+    content: t("captcha.errors.saveFailed", undefined, preferredLocale),
+    interaction,
+  });
+};
+
+const replyPatchSavedSuccess = async ({
+  interaction,
+  successMessage,
+}: {
+  interaction: ChatInputCommandInteraction;
+  successMessage: string;
+}): Promise<void> => {
+  await replyEphemeral({
+    content: successMessage,
+    interaction,
+    tone: "success",
+  });
+};
+
+const createCaptchaPreviewAttachment = async ({
+  settings,
+}: {
+  settings: GuildCaptchaSettings;
+}): Promise<AttachmentBuilder> => {
+  const { imageBuffer } = await generateCaptchaImage({ settings });
+  return new AttachmentBuilder(imageBuffer, {
+    description: t("verification.image.description"),
+    name: CAPTCHA_PREVIEW_IMAGE_FILE_NAME,
+  });
+};
+
+const tryReplyCaptchaPreview = async ({
+  guild,
+  guildId,
+  interaction,
+  successMessage,
+}: {
+  guild: Guild;
+  guildId: string;
+  interaction: ChatInputCommandInteraction;
+  successMessage: string;
+}): Promise<boolean> => {
+  try {
+    const updatedSettings = await getGuildCaptchaSettings(guild);
+    const previewAttachment = await createCaptchaPreviewAttachment({
+      settings: updatedSettings,
+    });
+    const previewEmbed = createMinimalEmbed({
+      message: successMessage,
+      tone: "success",
+    }).setImage(`attachment://${CAPTCHA_PREVIEW_IMAGE_FILE_NAME}`);
+
+    await replyEphemeralOptions({
+      interaction,
+      options: {
+        embeds: [previewEmbed],
+        files: [previewAttachment],
+      },
+    });
+    return true;
+  } catch (error: unknown) {
+    log.warn({
+      err: error,
+      guildId,
+      interactionId: interaction.id,
+      message:
+        "Failed to generate captcha preview after saving captcha settings",
+      userId: interaction.user.id,
+    });
+    return false;
+  }
+};
+
 const savePatchAndReply = async ({
+  guild,
+  includeCaptchaPreview = false,
   guildId,
   interaction,
   patch,
   successMessage,
 }: {
+  guild?: Guild;
+  includeCaptchaPreview?: boolean;
   guildId: string;
   interaction: ChatInputCommandInteraction;
   patch: GuildCaptchaSettingsPatch;
@@ -194,19 +302,30 @@ const savePatchAndReply = async ({
 }): Promise<void> => {
   const saved = await savePatch({ guildId, patch });
   if (!saved) {
-    const preferredLocale = getInteractionLocale(interaction);
-    await replyEphemeral({
-      content: t("captcha.errors.saveFailed", undefined, preferredLocale),
+    await replySaveFailed({ interaction });
+    return;
+  }
+
+  if (!includeCaptchaPreview || !guild) {
+    await replyPatchSavedSuccess({
       interaction,
+      successMessage,
     });
     return;
   }
 
-  await replyEphemeral({
-    content: successMessage,
+  const previewSent = await tryReplyCaptchaPreview({
+    guild,
+    guildId,
     interaction,
-    tone: "success",
+    successMessage,
   });
+  if (!previewSent) {
+    await replyPatchSavedSuccess({
+      interaction,
+      successMessage,
+    });
+  }
 };
 
 const validateRoleSelection = ({
@@ -904,7 +1023,9 @@ const handleSetCaptchaType = async ({
   }
 
   await savePatchAndReply({
+    guild: context.guild,
     guildId: context.guild.id,
+    includeCaptchaPreview: true,
     interaction,
     patch: {
       captchaType: value,
@@ -942,7 +1063,9 @@ const handleSetCodeLength = async ({
   }
 
   await savePatchAndReply({
+    guild: context.guild,
     guildId: context.guild.id,
+    includeCaptchaPreview: true,
     interaction,
     patch: {
       codeLength: value,
@@ -980,7 +1103,9 @@ const handleSetNoiseLevel = async ({
   }
 
   await savePatchAndReply({
+    guild: context.guild,
     guildId: context.guild.id,
+    includeCaptchaPreview: true,
     interaction,
     patch: {
       captchaNoiseLevel: value,
@@ -1000,7 +1125,9 @@ const handleSetCaseSensitive = async ({
   const preferredLocale = getInteractionLocale(interaction);
   const enabled = interaction.options.getBoolean("enabled", true);
   await savePatchAndReply({
+    guild: context.guild,
     guildId: context.guild.id,
+    includeCaptchaPreview: true,
     interaction,
     patch: {
       captchaCaseSensitive: enabled,
