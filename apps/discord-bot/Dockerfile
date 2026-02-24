@@ -24,7 +24,10 @@ ARG TURBO_TEAM
 ENV TURBO_TEAM=$TURBO_TEAM
 ARG TURBO_TOKEN
 ENV TURBO_TOKEN=$TURBO_TOKEN
+ARG DATABASE_URL=postgresql://postgres:password@localhost:5432/terryscord
+ENV DATABASE_URL=$DATABASE_URL
 
+RUN bun run --cwd packages/db db:generate
 RUN bun x turbo run build --filter=discord-bot...
 
 # Prune dev dependencies while keeping built production artifacts.
