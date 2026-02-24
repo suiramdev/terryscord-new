@@ -8,22 +8,37 @@ model Guild {
 }
 
 model GuildVerificationSetting {
-  guildId            String   @id
-  verifiedRoleId     String?
-  captchaCategoryId  String?
+  guildId               String   @id
+  verifiedRoleId        String?
+  captchaCategoryId     String?
   attemptAlertChannelId String?
   captchaCaseSensitive Boolean?
-  captchaNoiseLevel  Int?
-  maxAttempts        Int?
-  timeoutSeconds     Int?
-  kickOnFailure      Boolean?
-  allowAdminAccess   Boolean?
-  channelNameFormat  String?
-  captchaType        String?
-  codeLength         Int?
-  debugLogging       Boolean?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  captchaNoiseLevel     Int?
+  maxAttempts           Int?
+  timeoutSeconds        Int?
+  kickOnFailure         Boolean?
+  allowAdminAccess      Boolean?
+  channelNameFormat     String?
+  captchaType           String?
+  codeLength            Int?
+  debugLogging          Boolean?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   @@map("guild_verification_setting")
+}
+
+model GuildVerificationSession {
+  guildId               String
+  userId                String
+  verificationChannelId String
+  challengeMessageId    String
+  expectedResponse      String
+  attemptsUsed          Int      @default(0)
+  alertThresholdReached Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@id([guildId, userId])
+  @@map("guild_verification_session")
 }

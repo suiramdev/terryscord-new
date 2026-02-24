@@ -24,6 +24,12 @@ import { log } from "evlog";
 
 import { t } from "@/i18n";
 import { generateCaptchaImage } from "@/integrations/captcha-image";
+import {
+  deletePersistedCaptchaSessionState,
+  getPersistedCaptchaSessionState,
+  upsertPersistedCaptchaSessionState,
+} from "@/integrations/captcha-session-state";
+import type { PersistedCaptchaSessionState } from "@/integrations/captcha-session-state";
 import { getGuildCaptchaSettings } from "@/integrations/captcha-settings";
 import type { GuildCaptchaSettings } from "@/integrations/captcha-settings";
 
@@ -811,6 +817,77 @@ const createCaptchaChallengeState = ({
   verified: false,
 });
 
+const createCaptchaChallengeStateFromPersistence = ({
+  persistedState,
+}: {
+  persistedState: PersistedCaptchaSessionState;
+}): CaptchaChallengeState => ({
+  alertThresholdReached: persistedState.alertThresholdReached,
+  attemptsUsed: persistedState.attemptsUsed,
+  challengeMessageId: persistedState.challengeMessageId,
+  expectedResponse: persistedState.expectedResponse,
+  verified: false,
+});
+
+const persistCaptchaChallengeState = async ({
+  channel,
+  member,
+  state,
+}: {
+  channel: TextChannel;
+  member: GuildMember;
+  state: CaptchaChallengeState;
+}): Promise<void> => {
+  if (!state.challengeMessageId) {
+    return;
+  }
+
+  await upsertPersistedCaptchaSessionState({
+    guildId: member.guild.id,
+    state: {
+      alertThresholdReached: state.alertThresholdReached,
+      attemptsUsed: state.attemptsUsed,
+      challengeMessageId: state.challengeMessageId,
+      expectedResponse: state.expectedResponse,
+      verificationChannelId: channel.id,
+    },
+    userId: member.id,
+  });
+};
+
+const deletePersistedCaptchaChallengeState = async ({
+  member,
+}: {
+  member: GuildMember | PartialGuildMember;
+}): Promise<void> => {
+  await deletePersistedCaptchaSessionState({
+    guildId: member.guild.id,
+    userId: member.id,
+  });
+};
+
+const resolvePersistedRecoveryChallengeState = async ({
+  channel,
+  member,
+}: {
+  channel: TextChannel;
+  member: GuildMember;
+}) => {
+  const persistedState = await getPersistedCaptchaSessionState({
+    guildId: member.guild.id,
+    userId: member.id,
+  });
+  if (!persistedState) {
+    return null;
+  }
+
+  if (persistedState.verificationChannelId !== channel.id) {
+    return null;
+  }
+
+  return persistedState;
+};
+
 const resolveAttemptAlertChannel = async ({
   channelId,
   guild,
@@ -1287,6 +1364,11 @@ const refreshCaptchaChallenge = async ({
     caseSensitive: settings.captchaCaseSensitive,
     input: nextChallenge.code,
   });
+  await persistCaptchaChallengeState({
+    channel,
+    member,
+    state,
+  });
 
   logCaptchaDebug({
     debugEnabled,
@@ -1401,6 +1483,12 @@ const handleCaptchaResponse = async ({
     settings,
     state,
   });
+
+  await persistCaptchaChallengeState({
+    channel,
+    member,
+    state,
+  });
 };
 
 const finalizeCaptchaChallenge = async ({
@@ -1436,6 +1524,9 @@ const finalizeCaptchaChallenge = async ({
       debugEnabled,
       member,
       settings,
+    });
+    await deletePersistedCaptchaChallengeState({
+      member,
     });
     await waitForMilliseconds(CHANNEL_DELETE_DELAY_MS);
     await deleteChannelSafely({
@@ -1481,15 +1572,9 @@ const logCaptchaChallengeGenerated = ({
 
 const prepareReusableChallengeMessage = async ({
   channel,
-  source,
 }: {
   channel: TextChannel;
-  source: VerificationSource;
 }): Promise<string | null> => {
-  if (source !== "recovery") {
-    return null;
-  }
-
   const { latestMessageId, redundantMessageIds } =
     await resolveRecoveryChallengeMessages({
       channel,
@@ -1500,6 +1585,53 @@ const prepareReusableChallengeMessage = async ({
   });
 
   return latestMessageId;
+};
+
+const resolveRecoveryInitializationState = async ({
+  channel,
+  member,
+  source,
+}: {
+  channel: TextChannel;
+  member: GuildMember;
+  source: VerificationSource;
+}): Promise<{
+  persistedChallengeState: CaptchaChallengeState | null;
+  reusableMessageId: string | null;
+}> => {
+  if (source !== "recovery") {
+    return {
+      persistedChallengeState: null,
+      reusableMessageId: null,
+    };
+  }
+
+  const [persistedState, reusableMessageId] = await Promise.all([
+    resolvePersistedRecoveryChallengeState({
+      channel,
+      member,
+    }),
+    prepareReusableChallengeMessage({
+      channel,
+    }),
+  ]);
+
+  if (
+    !persistedState ||
+    persistedState.challengeMessageId !== reusableMessageId
+  ) {
+    return {
+      persistedChallengeState: null,
+      reusableMessageId,
+    };
+  }
+
+  return {
+    persistedChallengeState: createCaptchaChallengeStateFromPersistence({
+      persistedState,
+    }),
+    reusableMessageId,
+  };
 };
 
 const cleanupReplacedReusableChallengeMessage = async ({
@@ -1521,17 +1653,17 @@ const cleanupReplacedReusableChallengeMessage = async ({
   });
 };
 
-const initializeCaptchaChallengeState = async ({
+const createAndPersistInitialCaptchaChallengeState = async ({
   channel,
   debugEnabled,
   member,
-  source,
+  reusableMessageId,
   settings,
 }: {
   channel: TextChannel;
   debugEnabled: boolean;
   member: GuildMember;
-  source: VerificationSource;
+  reusableMessageId: string | null;
   settings: GuildCaptchaSettings;
 }): Promise<CaptchaChallengeState> => {
   const captchaChallenge = await createCaptchaChallenge({
@@ -1547,11 +1679,6 @@ const initializeCaptchaChallengeState = async ({
     debugEnabled,
     member,
     settings,
-  });
-
-  const reusableMessageId = await prepareReusableChallengeMessage({
-    channel,
-    source,
   });
 
   const initialChallengeMessageId = await sendCaptchaChallenge({
@@ -1572,7 +1699,44 @@ const initializeCaptchaChallengeState = async ({
   });
 
   challengeState.challengeMessageId = initialChallengeMessageId;
+  await persistCaptchaChallengeState({
+    channel,
+    member,
+    state: challengeState,
+  });
   return challengeState;
+};
+
+const initializeCaptchaChallengeState = async ({
+  channel,
+  debugEnabled,
+  member,
+  source,
+  settings,
+}: {
+  channel: TextChannel;
+  debugEnabled: boolean;
+  member: GuildMember;
+  source: VerificationSource;
+  settings: GuildCaptchaSettings;
+}): Promise<CaptchaChallengeState> => {
+  const { persistedChallengeState, reusableMessageId } =
+    await resolveRecoveryInitializationState({
+      channel,
+      member,
+      source,
+    });
+  if (persistedChallengeState) {
+    return persistedChallengeState;
+  }
+
+  return await createAndPersistInitialCaptchaChallengeState({
+    channel,
+    debugEnabled,
+    member,
+    reusableMessageId,
+    settings,
+  });
 };
 
 const processCaptchaMessageSafely = async ({
@@ -2010,6 +2174,9 @@ const resolveVerificationChannelForWorkflow = async ({
   source: VerificationSource;
 }): Promise<TextChannel | null> => {
   if (source !== "recovery") {
+    await deletePersistedCaptchaChallengeState({
+      member,
+    });
     await purgeStaleMemberChannels(member);
     return await createVerificationChannel({
       debugEnabled,
@@ -2026,6 +2193,10 @@ const resolveVerificationChannelForWorkflow = async ({
   if (existingChannel) {
     return existingChannel;
   }
+
+  await deletePersistedCaptchaChallengeState({
+    member,
+  });
 
   logCaptchaDebug({
     debugEnabled,
@@ -2352,10 +2523,17 @@ const recoverPendingVerificationForMember = async ({
     memberId,
   });
   if (!member) {
+    await deletePersistedCaptchaSessionState({
+      guildId: guild.id,
+      userId: memberId,
+    });
     return;
   }
 
   if (!isMemberStillUnverified({ member, settings })) {
+    await deletePersistedCaptchaChallengeState({
+      member,
+    });
     return;
   }
 
@@ -2488,6 +2666,9 @@ export const handleGuildMemberRemove = async (
   activeVerificationSessions.delete(
     buildSessionKey(member.guild.id, member.id)
   );
+  await deletePersistedCaptchaChallengeState({
+    member,
+  });
 
   await deleteVerificationChannelsForMember({
     guild: member.guild,
