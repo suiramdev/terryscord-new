@@ -77,6 +77,8 @@ export const frTranslations = {
     "Le nombre maximal d'essais doit être compris entre {min} et {max}.",
   "captcha.errors.noiseLevelRange":
     "Le niveau de bruit doit être compris entre {min} et {max}.",
+  "captcha.errors.recreateUnverifiedFailed":
+    "Impossible de relancer le captcha pour les membres non vérifiés. Vérifiez les permissions du bot puis réessayez.",
   "captcha.errors.roleAboveBot":
     "Ce rôle est au-dessus de mon rôle le plus élevé, je ne peux donc pas l'attribuer.",
   "captcha.errors.roleEveryone":
@@ -144,6 +146,8 @@ export const frTranslations = {
     "Seuil d'alerte essais défini sur **{value}**.",
   "captcha.success.noiseLevelSet":
     "Niveau de bruit captcha défini sur **{value}**.",
+  "captcha.success.recreateUnverifiedStarted":
+    "Relance captcha lancée pour les membres non vérifiés.\nMembres totaux: **{totalMemberCount}**\nBots ignorés: **{botMemberCount}**\nDéjà vérifiés: **{alreadyVerifiedCount}**\nNon vérifiés ciblés: **{nonVerifiedMemberCount}**\nSessions démarrées: **{startedSessionCount}**\nSessions déjà actives: **{alreadyActiveSessionCount}**",
   "captcha.success.resetAll":
     "Tous les paramètres captcha ont ete réinitialisés sur les valeurs de secours.",
   "captcha.success.resetSingle":
@@ -221,11 +225,13 @@ export const frTranslations = {
     "Développement uniquement : déclencher le workflow captcha pour un membre existant",
   "commands.captcha.sub.kickOnFailure.description":
     "Activer ou désactiver l'expulsion des utilisateurs qui échouent",
-
   "commands.captcha.sub.maxAttempts.description":
     "Définir le seuil d'essais ratés avant alerte admin",
+
   "commands.captcha.sub.noiseLevel.description":
     "Définir le niveau de bruit captcha pour les leurres et traces",
+  "commands.captcha.sub.recreateUnverified.description":
+    "Relancer le workflow captcha pour tous les membres non vérifiés existants",
   "commands.captcha.sub.reset.description":
     "Réinitialiser un ou plusieurs paramètres captcha sur les valeurs de secours",
   "commands.captcha.sub.show.description":

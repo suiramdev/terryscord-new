@@ -65,7 +65,21 @@ interface CollectedCaptchaEntry {
   id: string;
 }
 
-type VerificationSource = "debug" | "guildMemberAdd" | "recovery";
+type VerificationSource =
+  | "bulkRecreate"
+  | "debug"
+  | "guildMemberAdd"
+  | "recovery";
+
+export interface TriggerUnverifiedCaptchaSummary {
+  alreadyActiveSessionCount: number;
+  alreadyVerifiedCount: number;
+  botMemberCount: number;
+  nonVerifiedMemberCount: number;
+  startedSessionCount: number;
+  totalMemberCount: number;
+}
+
 interface CaptchaCanvasModule {
   CaptchaGenerator: typeof CaptchaGeneratorType;
 }
@@ -1744,6 +1758,91 @@ const isMemberStillUnverified = ({
   return !member.roles.cache.has(settings.verifiedRoleId);
 };
 
+const createEmptyTriggerUnverifiedCaptchaSummary =
+  (): TriggerUnverifiedCaptchaSummary => ({
+    alreadyActiveSessionCount: 0,
+    alreadyVerifiedCount: 0,
+    botMemberCount: 0,
+    nonVerifiedMemberCount: 0,
+    startedSessionCount: 0,
+    totalMemberCount: 0,
+  });
+
+const collectUnverifiedMemberCaptchaSummary = ({
+  member,
+  source,
+  summary,
+}: {
+  member: GuildMember;
+  source: VerificationSource;
+  summary: TriggerUnverifiedCaptchaSummary;
+}): void => {
+  summary.nonVerifiedMemberCount += 1;
+
+  if (startCaptchaVerificationSession({ member, source })) {
+    summary.startedSessionCount += 1;
+    return;
+  }
+
+  summary.alreadyActiveSessionCount += 1;
+};
+
+const collectMemberCaptchaSummary = ({
+  member,
+  settings,
+  source,
+  summary,
+}: {
+  member: GuildMember;
+  settings: GuildCaptchaSettings;
+  source: VerificationSource;
+  summary: TriggerUnverifiedCaptchaSummary;
+}): void => {
+  summary.totalMemberCount += 1;
+
+  if (member.user.bot) {
+    summary.botMemberCount += 1;
+    return;
+  }
+
+  if (!isMemberStillUnverified({ member, settings })) {
+    summary.alreadyVerifiedCount += 1;
+    return;
+  }
+
+  collectUnverifiedMemberCaptchaSummary({
+    member,
+    source,
+    summary,
+  });
+};
+
+const logUnverifiedCaptchaSummary = ({
+  guild,
+  settings,
+  source,
+  summary,
+}: {
+  guild: Guild;
+  settings: GuildCaptchaSettings;
+  source: VerificationSource;
+  summary: TriggerUnverifiedCaptchaSummary;
+}): void => {
+  log.info({
+    alreadyActiveSessionCount: summary.alreadyActiveSessionCount,
+    alreadyVerifiedCount: summary.alreadyVerifiedCount,
+    botMemberCount: summary.botMemberCount,
+    guildId: guild.id,
+    message:
+      "Bulk captcha verification trigger evaluated for unverified members",
+    nonVerifiedMemberCount: summary.nonVerifiedMemberCount,
+    source,
+    startedSessionCount: summary.startedSessionCount,
+    totalMemberCount: summary.totalMemberCount,
+    verifiedRoleId: settings.verifiedRoleId,
+  });
+};
+
 const recoverPendingVerificationForMember = async ({
   guild,
   memberId,
@@ -1828,6 +1927,37 @@ export const recoverPendingVerificationSessions = async (
       });
     }
   }
+};
+
+export const triggerCaptchaVerificationForUnverifiedMembers = async ({
+  guild,
+  source,
+}: {
+  guild: Guild;
+  source: VerificationSource;
+}): Promise<TriggerUnverifiedCaptchaSummary> => {
+  await guild.members.fetch();
+
+  const settings = await getGuildCaptchaSettings(guild);
+  const summary = createEmptyTriggerUnverifiedCaptchaSummary();
+
+  for (const member of guild.members.cache.values()) {
+    collectMemberCaptchaSummary({
+      member,
+      settings,
+      source,
+      summary,
+    });
+  }
+
+  logUnverifiedCaptchaSummary({
+    guild,
+    settings,
+    source,
+    summary,
+  });
+
+  return summary;
 };
 
 export const triggerCaptchaVerificationForMember = ({

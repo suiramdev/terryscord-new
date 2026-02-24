@@ -1,6 +1,7 @@
 import { env } from "@terryscord/env/bot";
 import {
   ChannelType,
+  MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
@@ -12,10 +13,14 @@ import type {
   Role,
   TextChannel,
 } from "discord.js";
+import { log } from "evlog";
 
-import { replyWithEmbed } from "@/discord/embeds";
+import { createMinimalEmbed, replyWithEmbed } from "@/discord/embeds";
 import type { BotEmbedTone } from "@/discord/embeds";
-import { triggerCaptchaVerificationForMember } from "@/discord/events/guild-member-add";
+import {
+  triggerCaptchaVerificationForMember,
+  triggerCaptchaVerificationForUnverifiedMembers,
+} from "@/discord/events/guild-member-add";
 import { t } from "@/i18n";
 import {
   CAPTCHA_LIMITS,
@@ -1207,6 +1212,65 @@ const handleDebugRun = async ({
   });
 };
 
+const handleRecreateUnverified = async ({
+  context,
+  interaction,
+}: HandlerArgs): Promise<void> => {
+  const preferredLocale = getInteractionLocale(interaction);
+  await interaction.deferReply({
+    flags: MessageFlags.Ephemeral,
+  });
+
+  try {
+    const summary = await triggerCaptchaVerificationForUnverifiedMembers({
+      guild: context.guild,
+      source: "bulkRecreate",
+    });
+
+    await interaction.editReply({
+      embeds: [
+        createMinimalEmbed({
+          message: t(
+            "captcha.success.recreateUnverifiedStarted",
+            {
+              alreadyActiveSessionCount: summary.alreadyActiveSessionCount,
+              alreadyVerifiedCount: summary.alreadyVerifiedCount,
+              botMemberCount: summary.botMemberCount,
+              nonVerifiedMemberCount: summary.nonVerifiedMemberCount,
+              startedSessionCount: summary.startedSessionCount,
+              totalMemberCount: summary.totalMemberCount,
+            },
+            preferredLocale
+          ),
+          tone: "success",
+        }),
+      ],
+    });
+  } catch (error: unknown) {
+    log.error({
+      err: error,
+      guildId: context.guild.id,
+      interactionId: interaction.id,
+      message:
+        "Failed to recreate captcha channels for existing non-verified members",
+      userId: interaction.user.id,
+    });
+
+    await interaction.editReply({
+      embeds: [
+        createMinimalEmbed({
+          message: t(
+            "captcha.errors.recreateUnverifiedFailed",
+            undefined,
+            preferredLocale
+          ),
+          tone: "error",
+        }),
+      ],
+    });
+  }
+};
+
 const handleReset = async ({
   context,
   interaction,
@@ -1232,6 +1296,7 @@ const handleReset = async ({
 
 const topLevelSubcommandHandlers: Record<string, SubcommandHandler> = {
   "debug-run": handleDebugRun,
+  "recreate-unverified": handleRecreateUnverified,
   reset: handleReset,
   show: handleShow,
 };
@@ -1481,6 +1546,13 @@ export const captchaCommand: SlashCommand = {
             .setName("member")
             .setDescription(t("commands.captcha.option.member.description"))
             .setRequired(true)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("recreate-unverified")
+        .setDescription(
+          t("commands.captcha.sub.recreateUnverified.description")
         )
     )
     .addSubcommand((subcommand) =>
