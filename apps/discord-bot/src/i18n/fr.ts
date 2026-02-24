@@ -411,6 +411,8 @@ export const frTranslations = {
     "La vérification captcha a échoué suite à une erreur interne",
   "verification.audit.kickReason":
     "{failureMessage} Essais utilisés : {attemptsUsed}.",
+  "verification.audit.memberLeft":
+    "Suppression du salon captcha après le départ du membre",
   "verification.audit.removeStaleBeforeCreate":
     "Suppression d'un ancien salon de vérification captcha avant d'en créer un nouveau",
   "verification.audit.roleAddReason":

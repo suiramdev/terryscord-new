@@ -7,6 +7,7 @@ import { commandRegistry } from "@/commands";
 import {
   cleanupOrphanedVerificationChannels,
   handleGuildMemberAdd,
+  handleGuildMemberRemove,
   recoverPendingVerificationSessions,
 } from "./guild-member-add";
 import { handleInteractionCreate } from "./interaction-create";
@@ -69,6 +70,25 @@ export const registerEventHandlers = ({
         err: error,
         guildId: member.guild.id,
         message: "Guild member add handler failed",
+        userId: member.id,
+      });
+    }
+  });
+
+  client.on(Events.GuildMemberRemove, async (member) => {
+    log.debug({
+      guildId: member.guild.id,
+      message: "Received guild member remove event",
+      userId: member.id,
+    });
+
+    try {
+      await handleGuildMemberRemove(member);
+    } catch (error: unknown) {
+      log.error({
+        err: error,
+        guildId: member.guild.id,
+        message: "Guild member remove handler failed",
         userId: member.id,
       });
     }

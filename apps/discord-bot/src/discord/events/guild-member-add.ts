@@ -17,6 +17,7 @@ import type {
   GuildMember,
   MessageCreateOptions,
   OverwriteResolvable,
+  PartialGuildMember,
   Role,
   TextChannel,
 } from "discord.js";
@@ -437,23 +438,72 @@ const buildPermissionOverwrites = async ({
 const isCaptchaVerificationChannel = (channel: TextChannel): boolean =>
   parseVerificationChannelTopic(channel.topic) !== null;
 
-const purgeStaleMemberChannels = async (member: GuildMember): Promise<void> => {
-  await member.guild.channels.fetch();
+const collectVerificationChannelsForMember = async ({
+  guild,
+  memberId,
+}: {
+  guild: Guild;
+  memberId: string;
+}): Promise<TextChannel[]> => {
+  await guild.channels.fetch();
+  const verificationChannels: TextChannel[] = [];
 
-  for (const guildChannel of member.guild.channels.cache.values()) {
+  for (const guildChannel of guild.channels.cache.values()) {
     if (guildChannel.type !== ChannelType.GuildText) {
       continue;
     }
 
-    if (parseVerificationChannelTopic(guildChannel.topic) !== member.id) {
+    if (parseVerificationChannelTopic(guildChannel.topic) !== memberId) {
       continue;
     }
 
+    verificationChannels.push(guildChannel);
+  }
+
+  return verificationChannels;
+};
+
+const deleteVerificationChannelsForMember = async ({
+  guild,
+  memberId,
+  reason,
+}: {
+  guild: Guild;
+  memberId: string;
+  reason: string;
+}): Promise<void> => {
+  const verificationChannels = await collectVerificationChannelsForMember({
+    guild,
+    memberId,
+  });
+  for (const verificationChannel of verificationChannels) {
     await deleteChannelSafely({
-      channel: guildChannel,
-      reason: t("verification.audit.removeStaleBeforeCreate"),
+      channel: verificationChannel,
+      reason,
     });
   }
+};
+
+const resolveExistingVerificationChannelForMember = async ({
+  guild,
+  memberId,
+}: {
+  guild: Guild;
+  memberId: string;
+}): Promise<TextChannel | null> => {
+  const verificationChannels = await collectVerificationChannelsForMember({
+    guild,
+    memberId,
+  });
+  return verificationChannels[0] ?? null;
+};
+
+const purgeStaleMemberChannels = async (member: GuildMember): Promise<void> => {
+  await deleteVerificationChannelsForMember({
+    guild: member.guild,
+    memberId: member.id,
+    reason: t("verification.audit.removeStaleBeforeCreate"),
+  });
 };
 
 const createVerificationChannelAttempt = async ({
@@ -1091,32 +1141,26 @@ const notifyAttemptThresholdReached = async ({
 const createCaptchaCollector = ({
   channel,
   member,
-  settings,
 }: {
   channel: TextChannel;
   member: GuildMember;
-  settings: GuildCaptchaSettings;
 }) =>
   channel.createMessageCollector({
     filter: (message) => message.author.id === member.id && !message.author.bot,
-    time: settings.timeoutSeconds * 1000,
   });
 
 const createCaptchaRegenerateCollector = ({
   channel,
   member,
-  settings,
 }: {
   channel: TextChannel;
   member: GuildMember;
-  settings: GuildCaptchaSettings;
 }) =>
   channel.createMessageComponentCollector({
     componentType: ComponentType.Button,
     filter: (interaction) =>
       interaction.customId === CAPTCHA_REGENERATE_BUTTON_CUSTOM_ID &&
       interaction.user.id === member.id,
-    time: settings.timeoutSeconds * 1000,
   });
 
 const awaitCollectorEndReason = async (
@@ -1412,20 +1456,20 @@ const finalizeCaptchaChallenge = async ({
       member,
       settings,
     });
-  } else {
-    await handleFailedVerification({
-      attemptsUsed: state.attemptsUsed,
+    await waitForMilliseconds(CHANNEL_DELETE_DELAY_MS);
+    await deleteChannelSafely({
       channel,
-      member,
-      reason: collectorReason,
-      settings,
+      reason: t("verification.audit.verificationComplete"),
     });
+    return;
   }
 
-  await waitForMilliseconds(CHANNEL_DELETE_DELAY_MS);
-  await deleteChannelSafely({
+  await handleFailedVerification({
+    attemptsUsed: state.attemptsUsed,
     channel,
-    reason: t("verification.audit.verificationComplete"),
+    member,
+    reason: collectorReason,
+    settings,
   });
 };
 
@@ -1807,12 +1851,10 @@ const runCaptchaChallenge = async ({
   const collector = createCaptchaCollector({
     channel,
     member,
-    settings,
   });
   const regenerateCollector = createCaptchaRegenerateCollector({
     channel,
     member,
-    settings,
   });
   const queueState = createCaptchaQueueState();
 
@@ -1895,11 +1937,48 @@ const handleVerificationWorkflowError = async ({
       ],
     },
   });
-  await waitForMilliseconds(CHANNEL_DELETE_DELAY_MS);
-  await deleteChannelSafely({
-    channel,
-    reason: t("verification.audit.internalError"),
+};
+
+const resolveVerificationChannelForWorkflow = async ({
+  debugEnabled,
+  member,
+  settings,
+  source,
+}: {
+  debugEnabled: boolean;
+  member: GuildMember;
+  settings: GuildCaptchaSettings;
+  source: VerificationSource;
+}): Promise<TextChannel | null> => {
+  if (source !== "recovery") {
+    await purgeStaleMemberChannels(member);
+    return await createVerificationChannel({
+      debugEnabled,
+      member,
+      settings,
+      source,
+    });
+  }
+
+  const existingChannel = await resolveExistingVerificationChannelForMember({
+    guild: member.guild,
+    memberId: member.id,
   });
+  if (existingChannel) {
+    return existingChannel;
+  }
+
+  logCaptchaDebug({
+    debugEnabled,
+    message:
+      "Skipping recovery verification start because existing captcha channel was not found",
+    payload: {
+      guildId: member.guild.id,
+      source,
+      userId: member.id,
+    },
+  });
+  return null;
 };
 
 const runVerificationWorkflow = async ({
@@ -1936,13 +2015,15 @@ const runVerificationWorkflow = async ({
     },
   });
 
-  await purgeStaleMemberChannels(member);
-  const channel = await createVerificationChannel({
+  const channel = await resolveVerificationChannelForWorkflow({
     debugEnabled,
     member,
     settings,
     source,
   });
+  if (!channel) {
+    return;
+  }
 
   try {
     await runCaptchaChallenge({
@@ -2338,5 +2419,19 @@ export const handleGuildMemberAdd = (member: GuildMember): void => {
   triggerCaptchaVerificationForMember({
     member,
     source: "guildMemberAdd",
+  });
+};
+
+export const handleGuildMemberRemove = async (
+  member: GuildMember | PartialGuildMember
+): Promise<void> => {
+  activeVerificationSessions.delete(
+    buildSessionKey(member.guild.id, member.id)
+  );
+
+  await deleteVerificationChannelsForMember({
+    guild: member.guild,
+    memberId: member.id,
+    reason: t("verification.audit.memberLeft"),
   });
 };
