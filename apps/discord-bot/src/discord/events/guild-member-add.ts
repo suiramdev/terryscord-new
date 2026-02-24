@@ -1,11 +1,16 @@
 import type { CaptchaGenerator as CaptchaGeneratorType } from "captcha-canvas";
 import {
+  ActionRowBuilder,
   AttachmentBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   ChannelType,
+  ComponentType,
   EmbedBuilder,
   PermissionFlagsBits,
 } from "discord.js";
 import type {
+  ButtonInteraction,
   Client,
   Guild,
   GuildBasedChannel,
@@ -25,9 +30,11 @@ const CAPTCHA_CHANNEL_TOPIC_PREFIX = "captcha-verification";
 const CAPTCHA_IMAGE_FILE_NAME = "captcha.png";
 const CAPTCHA_IMAGE_HEIGHT = 140;
 const CAPTCHA_IMAGE_WIDTH = 360;
+const CAPTCHA_REGENERATE_BUTTON_CUSTOM_ID = "captcha-regenerate";
 const CAPTCHA_CASE_INSENSITIVE_CHARACTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const CAPTCHA_CASE_SENSITIVE_CHARACTERS =
   "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+const CAPTCHA_TEXT_FONT_FAMILY = "sans-serif";
 const CAPTCHA_TEXT_COLORS = ["#0f172a", "#1e293b", "#334155", "#475569"];
 const CAPTCHA_BACKGROUND_COLOR_START = "#f8fafc";
 const CAPTCHA_BACKGROUND_COLOR_END = "#e2e8f0";
@@ -65,11 +72,17 @@ interface CollectedCaptchaEntry {
   id: string;
 }
 
+interface CaptchaQueueState {
+  isProcessing: boolean;
+  queuedMessages: CollectedCaptchaEntry[];
+}
+
 type VerificationSource =
   | "bulkRecreate"
   | "debug"
   | "guildMemberAdd"
   | "recovery";
+type VerificationPromptVariant = "initial" | "regenerate" | "retry";
 
 export interface TriggerUnverifiedCaptchaSummary {
   alreadyActiveSessionCount: number;
@@ -238,6 +251,8 @@ const createCaptchaChallenge = async ({
     codeLength: settings.codeLength,
   });
   const noiseLevelRatio = toNoiseLevelRatio(settings.captchaNoiseLevel);
+  const textRotation = 6 + Math.round(10 * noiseLevelRatio);
+  const textSize = Math.max(40, 50 - Math.round(6 * noiseLevelRatio));
 
   const captchaGenerator = new CaptchaGenerator({
     height: CAPTCHA_IMAGE_HEIGHT,
@@ -245,22 +260,26 @@ const createCaptchaChallenge = async ({
   })
     .setBackground(createCaptchaBackgroundBuffer(noiseLevelRatio))
     .setCaptcha({
+      color: CAPTCHA_TEXT_COLORS[0],
       colors: CAPTCHA_TEXT_COLORS,
-      rotate: 12 + Math.round(28 * noiseLevelRatio),
-      size: 56,
-      skew: true,
+      font: CAPTCHA_TEXT_FONT_FAMILY,
+      opacity: 1,
+      rotate: textRotation,
+      size: textSize,
+      skew: noiseLevelRatio >= 0.7,
       text: code,
     })
     .setTrace({
       color: "#64748b",
-      opacity: noiseLevelRatio === 0 ? 0 : 0.25 + noiseLevelRatio * 0.5,
-      size: 1 + Math.round(3 * noiseLevelRatio),
+      opacity: noiseLevelRatio === 0 ? 0 : 0.2 + noiseLevelRatio * 0.35,
+      size: 1 + Math.round(2 * noiseLevelRatio),
     })
     .setDecoy({
       color: "#94a3b8",
-      opacity: noiseLevelRatio === 0 ? 0 : 0.12 + noiseLevelRatio * 0.28,
-      size: 14 + Math.round(8 * noiseLevelRatio),
-      total: Math.round(noiseLevelRatio * 80),
+      font: CAPTCHA_TEXT_FONT_FAMILY,
+      opacity: noiseLevelRatio === 0 ? 0 : 0.1 + noiseLevelRatio * 0.22,
+      size: 12 + Math.round(6 * noiseLevelRatio),
+      total: Math.round(noiseLevelRatio * 48),
     });
 
   const imageBuffer = await captchaGenerator.generate();
@@ -790,22 +809,48 @@ const handleFailedVerification = async ({
   });
 };
 
+const createCaptchaChallengeActions = (): ActionRowBuilder<ButtonBuilder>[] => [
+  new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(CAPTCHA_REGENERATE_BUTTON_CUSTOM_ID)
+      .setLabel(t("verification.button.regenerate"))
+      .setStyle(ButtonStyle.Secondary)
+  ),
+];
+
 const buildVerificationPromptEmbed = ({
   member,
-  retryAfterFailure,
+  promptVariant,
 }: {
   member: GuildMember;
-  retryAfterFailure: boolean;
-}): EmbedBuilder =>
-  createVerificationEmbed({
+  promptVariant: VerificationPromptVariant;
+}): EmbedBuilder => {
+  if (promptVariant === "retry") {
+    return createVerificationEmbed({
+      color: VERIFICATION_EMBED_COLOR_INFO,
+      description: t("verification.message.retryPrompt", {
+        memberId: member.id,
+      }),
+      title: t("verification.message.retryTitle"),
+    }).setImage(`attachment://${CAPTCHA_IMAGE_FILE_NAME}`);
+  }
+
+  if (promptVariant === "regenerate") {
+    return createVerificationEmbed({
+      color: VERIFICATION_EMBED_COLOR_INFO,
+      description: t("verification.message.regeneratePrompt", {
+        memberId: member.id,
+      }),
+      title: t("verification.message.regenerateTitle"),
+    }).setImage(`attachment://${CAPTCHA_IMAGE_FILE_NAME}`);
+  }
+
+  return createVerificationEmbed({
     color: VERIFICATION_EMBED_COLOR_INFO,
-    description: retryAfterFailure
-      ? t("verification.message.retryPrompt", { memberId: member.id })
-      : t("verification.message.welcome", { memberId: member.id }),
-    title: retryAfterFailure
-      ? t("verification.message.retryTitle")
-      : t("verification.message.welcomeTitle"),
+    description: t("verification.message.welcome", { memberId: member.id }),
+    title: t("verification.message.welcomeTitle"),
   }).setImage(`attachment://${CAPTCHA_IMAGE_FILE_NAME}`);
+};
 
 const shouldDeleteOrphanedChannel = (
   channel: GuildBasedChannel,
@@ -1057,6 +1102,23 @@ const createCaptchaCollector = ({
     time: settings.timeoutSeconds * 1000,
   });
 
+const createCaptchaRegenerateCollector = ({
+  channel,
+  member,
+  settings,
+}: {
+  channel: TextChannel;
+  member: GuildMember;
+  settings: GuildCaptchaSettings;
+}) =>
+  channel.createMessageComponentCollector({
+    componentType: ComponentType.Button,
+    filter: (interaction) =>
+      interaction.customId === CAPTCHA_REGENERATE_BUTTON_CUSTOM_ID &&
+      interaction.user.id === member.id,
+    time: settings.timeoutSeconds * 1000,
+  });
+
 const awaitCollectorEndReason = async (
   collector: ReturnType<TextChannel["createMessageCollector"]>
 ): Promise<string> => {
@@ -1071,20 +1133,21 @@ const sendCaptchaChallenge = async ({
   captchaAttachment,
   channel,
   member,
-  retryAfterFailure,
+  promptVariant,
 }: {
   captchaAttachment: AttachmentBuilder;
   channel: TextChannel;
   member: GuildMember;
-  retryAfterFailure: boolean;
+  promptVariant: VerificationPromptVariant;
 }): Promise<string | null> => {
   const embed = buildVerificationPromptEmbed({
     member,
-    retryAfterFailure,
+    promptVariant,
   });
 
   try {
     const sentMessage = await channel.send({
+      components: createCaptchaChallengeActions(),
       embeds: [embed],
       files: [captchaAttachment],
     });
@@ -1096,6 +1159,25 @@ const sendCaptchaChallenge = async ({
       message: "Failed to send captcha challenge in verification channel",
     });
     return null;
+  }
+};
+
+const acknowledgeCaptchaRegenerateInteraction = async ({
+  interaction,
+}: {
+  interaction: ButtonInteraction;
+}): Promise<boolean> => {
+  try {
+    await interaction.deferUpdate();
+    return true;
+  } catch (error: unknown) {
+    log.warn({
+      channelId: interaction.channelId,
+      err: error,
+      message: "Failed to acknowledge captcha regenerate interaction",
+      userId: interaction.user.id,
+    });
+    return false;
   }
 };
 
@@ -1119,27 +1201,77 @@ const deleteMessageSafely = async ({
   }
 };
 
-const deleteFailedAndPreviousChallengeMessages = async ({
+const isDefinedMessageId = (messageId: string | null): messageId is string =>
+  typeof messageId === "string";
+
+const removeCaptchaChallengeMessages = async ({
   channel,
-  failedMessageId,
-  previousMessageId,
+  messageIds,
 }: {
   channel: TextChannel;
-  failedMessageId: string;
-  previousMessageId: string | null;
+  messageIds: (string | null)[];
 }): Promise<void> => {
-  await deleteMessageSafely({
+  const uniqueMessageIds = [...new Set(messageIds.filter(isDefinedMessageId))];
+  for (const messageId of uniqueMessageIds) {
+    await deleteMessageSafely({
+      channel,
+      messageId,
+    });
+  }
+};
+
+const refreshCaptchaChallenge = async ({
+  channel,
+  debugEnabled,
+  debugLogMessage,
+  messageIdsToDelete,
+  member,
+  promptVariant,
+  settings,
+  state,
+}: {
+  channel: TextChannel;
+  debugEnabled: boolean;
+  debugLogMessage: string;
+  messageIdsToDelete: (string | null)[];
+  member: GuildMember;
+  promptVariant: VerificationPromptVariant;
+  settings: GuildCaptchaSettings;
+  state: CaptchaChallengeState;
+}): Promise<void> => {
+  const nextChallenge = await createCaptchaChallenge({
+    settings,
+  });
+  await removeCaptchaChallengeMessages({
     channel,
-    messageId: failedMessageId,
+    messageIds: messageIdsToDelete,
   });
 
-  if (!previousMessageId) {
+  const nextChallengeMessageId = await sendCaptchaChallenge({
+    captchaAttachment: nextChallenge.attachment,
+    channel,
+    member,
+    promptVariant,
+  });
+  if (!nextChallengeMessageId) {
     return;
   }
 
-  await deleteMessageSafely({
-    channel,
-    messageId: previousMessageId,
+  state.challengeMessageId = nextChallengeMessageId;
+  state.expectedResponse = normalizeCaptchaInput({
+    caseSensitive: settings.captchaCaseSensitive,
+    input: nextChallenge.code,
+  });
+
+  logCaptchaDebug({
+    debugEnabled,
+    message: debugLogMessage,
+    payload: {
+      attemptsUsed: state.attemptsUsed,
+      challengeMessageId: nextChallengeMessageId,
+      guildId: member.guild.id,
+      userId: member.id,
+    },
   });
 };
 
@@ -1158,41 +1290,40 @@ const rotateCaptchaChallenge = async ({
   settings: GuildCaptchaSettings;
   state: CaptchaChallengeState;
 }): Promise<void> => {
-  const rotatedChallenge = await createCaptchaChallenge({
-    settings,
-  });
-  const previousMessageId = state.challengeMessageId;
-  await deleteFailedAndPreviousChallengeMessages({
+  await refreshCaptchaChallenge({
     channel,
-    failedMessageId,
-    previousMessageId,
-  });
-
-  const nextChallengeMessageId = await sendCaptchaChallenge({
-    captchaAttachment: rotatedChallenge.attachment,
-    channel,
-    member,
-    retryAfterFailure: true,
-  });
-  if (!nextChallengeMessageId) {
-    return;
-  }
-
-  state.challengeMessageId = nextChallengeMessageId;
-  state.expectedResponse = normalizeCaptchaInput({
-    caseSensitive: settings.captchaCaseSensitive,
-    input: rotatedChallenge.code,
-  });
-
-  logCaptchaDebug({
     debugEnabled,
-    message: "Rotated captcha challenge after failed attempt",
-    payload: {
-      attemptsUsed: state.attemptsUsed,
-      challengeMessageId: nextChallengeMessageId,
-      guildId: member.guild.id,
-      userId: member.id,
-    },
+    debugLogMessage: "Rotated captcha challenge after failed attempt",
+    member,
+    messageIdsToDelete: [failedMessageId, state.challengeMessageId],
+    promptVariant: "retry",
+    settings,
+    state,
+  });
+};
+
+const regenerateCaptchaChallenge = async ({
+  channel,
+  debugEnabled,
+  member,
+  settings,
+  state,
+}: {
+  channel: TextChannel;
+  debugEnabled: boolean;
+  member: GuildMember;
+  settings: GuildCaptchaSettings;
+  state: CaptchaChallengeState;
+}): Promise<void> => {
+  await refreshCaptchaChallenge({
+    channel,
+    debugEnabled,
+    debugLogMessage: "Regenerated captcha challenge from button interaction",
+    member,
+    messageIdsToDelete: [state.challengeMessageId],
+    promptVariant: "regenerate",
+    settings,
+    state,
   });
 };
 
@@ -1334,7 +1465,7 @@ const initializeCaptchaChallengeState = async ({
     captchaAttachment: captchaChallenge.attachment,
     channel,
     member,
-    retryAfterFailure: false,
+    promptVariant: "initial",
   });
   if (!initialChallengeMessageId) {
     throw new Error("Unable to send initial captcha challenge message.");
@@ -1439,14 +1570,218 @@ const processQueuedCaptchaMessages = async ({
   }
 };
 
-const waitForCaptchaQueueToDrain = async ({
-  getIsProcessing,
-  queuedMessages,
+const createCaptchaQueueState = (): CaptchaQueueState => ({
+  isProcessing: false,
+  queuedMessages: [],
+});
+
+const drainQueuedCaptchaMessages = async ({
+  channel,
+  collector,
+  debugEnabled,
+  member,
+  queueState,
+  settings,
+  state,
 }: {
-  getIsProcessing: () => boolean;
-  queuedMessages: CollectedCaptchaEntry[];
+  channel: TextChannel;
+  collector: ReturnType<TextChannel["createMessageCollector"]>;
+  debugEnabled: boolean;
+  member: GuildMember;
+  queueState: CaptchaQueueState;
+  settings: GuildCaptchaSettings;
+  state: CaptchaChallengeState;
 }): Promise<void> => {
-  while (getIsProcessing() || queuedMessages.length > 0) {
+  await processQueuedCaptchaMessages({
+    channel,
+    collector,
+    debugEnabled,
+    member,
+    queuedMessages: queueState.queuedMessages,
+    setIsProcessing: (value) => {
+      queueState.isProcessing = value;
+    },
+    settings,
+    state,
+  });
+};
+
+const flushCaptchaQueueIfNeeded = async ({
+  channel,
+  collector,
+  debugEnabled,
+  member,
+  queueState,
+  settings,
+  state,
+}: {
+  channel: TextChannel;
+  collector: ReturnType<TextChannel["createMessageCollector"]>;
+  debugEnabled: boolean;
+  member: GuildMember;
+  queueState: CaptchaQueueState;
+  settings: GuildCaptchaSettings;
+  state: CaptchaChallengeState;
+}): Promise<void> => {
+  if (
+    queueState.isProcessing ||
+    queueState.queuedMessages.length === 0 ||
+    collector.ended ||
+    state.verified
+  ) {
+    return;
+  }
+
+  await drainQueuedCaptchaMessages({
+    channel,
+    collector,
+    debugEnabled,
+    member,
+    queueState,
+    settings,
+    state,
+  });
+};
+
+const enqueueCaptchaMessage = ({
+  message,
+  queueState,
+}: {
+  message: CollectedCaptchaEntry;
+  queueState: CaptchaQueueState;
+}): void => {
+  queueState.queuedMessages.push(message);
+};
+
+const stopRegenerateCollectorOnEnd = ({
+  collector,
+  regenerateCollector,
+}: {
+  collector: ReturnType<TextChannel["createMessageCollector"]>;
+  regenerateCollector: ReturnType<typeof createCaptchaRegenerateCollector>;
+}): void => {
+  collector.on("end", (_collected, reason) => {
+    if (!regenerateCollector.ended) {
+      regenerateCollector.stop(reason);
+    }
+  });
+};
+
+const logCaptchaRegenerateFailure = ({
+  channel,
+  error,
+  member,
+}: {
+  channel: TextChannel;
+  error: unknown;
+  member: GuildMember;
+}): void => {
+  log.error({
+    channelId: channel.id,
+    err: error,
+    guildId: member.guild.id,
+    message: "Failed to regenerate captcha challenge from button",
+    userId: member.id,
+  });
+};
+
+const runCaptchaRegenerationWithQueueLock = async ({
+  channel,
+  collector,
+  debugEnabled,
+  member,
+  queueState,
+  settings,
+  state,
+}: {
+  channel: TextChannel;
+  collector: ReturnType<TextChannel["createMessageCollector"]>;
+  debugEnabled: boolean;
+  member: GuildMember;
+  queueState: CaptchaQueueState;
+  settings: GuildCaptchaSettings;
+  state: CaptchaChallengeState;
+}): Promise<void> => {
+  queueState.isProcessing = true;
+  try {
+    await regenerateCaptchaChallenge({
+      channel,
+      debugEnabled,
+      member,
+      settings,
+      state,
+    });
+  } catch (error: unknown) {
+    logCaptchaRegenerateFailure({
+      channel,
+      error,
+      member,
+    });
+  } finally {
+    queueState.isProcessing = false;
+    await flushCaptchaQueueIfNeeded({
+      channel,
+      collector,
+      debugEnabled,
+      member,
+      queueState,
+      settings,
+      state,
+    });
+  }
+};
+
+const handleCaptchaRegenerateCollect = async ({
+  channel,
+  collector,
+  debugEnabled,
+  interaction,
+  member,
+  queueState,
+  settings,
+  state,
+}: {
+  channel: TextChannel;
+  collector: ReturnType<TextChannel["createMessageCollector"]>;
+  debugEnabled: boolean;
+  interaction: ButtonInteraction;
+  member: GuildMember;
+  queueState: CaptchaQueueState;
+  settings: GuildCaptchaSettings;
+  state: CaptchaChallengeState;
+}): Promise<void> => {
+  if (collector.ended || state.verified) {
+    return;
+  }
+
+  if (!(await acknowledgeCaptchaRegenerateInteraction({ interaction }))) {
+    return;
+  }
+
+  if (
+    queueState.isProcessing ||
+    interaction.message.id !== state.challengeMessageId
+  ) {
+    return;
+  }
+
+  await runCaptchaRegenerationWithQueueLock({
+    channel,
+    collector,
+    debugEnabled,
+    member,
+    queueState,
+    settings,
+    state,
+  });
+};
+
+const waitForCaptchaQueueToDrain = async ({
+  queueState,
+}: {
+  queueState: CaptchaQueueState;
+}): Promise<void> => {
+  while (queueState.isProcessing || queueState.queuedMessages.length > 0) {
     await waitForMilliseconds(50);
   }
 };
@@ -1474,26 +1809,46 @@ const runCaptchaChallenge = async ({
     member,
     settings,
   });
-  const queuedMessages: CollectedCaptchaEntry[] = [];
-  let isProcessingQueue = false;
-  collector.on("collect", async (message) => {
-    queuedMessages.push({
-      content: message.content,
-      id: message.id,
-    });
-    if (isProcessingQueue) {
-      return;
-    }
+  const regenerateCollector = createCaptchaRegenerateCollector({
+    channel,
+    member,
+    settings,
+  });
+  const queueState = createCaptchaQueueState();
 
-    await processQueuedCaptchaMessages({
+  collector.on("collect", async (message) => {
+    enqueueCaptchaMessage({
+      message: {
+        content: message.content,
+        id: message.id,
+      },
+      queueState,
+    });
+
+    await flushCaptchaQueueIfNeeded({
       channel,
       collector,
       debugEnabled,
       member,
-      queuedMessages,
-      setIsProcessing: (value) => {
-        isProcessingQueue = value;
-      },
+      queueState,
+      settings,
+      state: challengeState,
+    });
+  });
+
+  stopRegenerateCollectorOnEnd({
+    collector,
+    regenerateCollector,
+  });
+
+  regenerateCollector.on("collect", async (interaction) => {
+    await handleCaptchaRegenerateCollect({
+      channel,
+      collector,
+      debugEnabled,
+      interaction,
+      member,
+      queueState,
       settings,
       state: challengeState,
     });
@@ -1501,8 +1856,7 @@ const runCaptchaChallenge = async ({
 
   const collectorReason = await awaitCollectorEndReason(collector);
   await waitForCaptchaQueueToDrain({
-    getIsProcessing: () => isProcessingQueue,
-    queuedMessages,
+    queueState,
   });
   await finalizeCaptchaChallenge({
     channel,

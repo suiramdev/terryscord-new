@@ -17,7 +17,7 @@ export const CAPTCHA_LIMITS = {
     min: 1,
   },
   noiseLevel: {
-    defaultValue: 55,
+    defaultValue: 30,
     max: 100,
     min: 0,
   },

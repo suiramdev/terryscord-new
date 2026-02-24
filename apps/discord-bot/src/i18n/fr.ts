@@ -416,6 +416,7 @@ export const frTranslations = {
   "verification.audit.roleAddReason":
     "Vérification captcha terminée avec succès",
   "verification.audit.verificationComplete": "Vérification captcha terminée",
+  "verification.button.regenerate": "Régénérer le captcha",
   "verification.channelName.prefix": "vérification",
   "verification.embed.defaultTitle": "Vérification",
   "verification.image.description": "Challenge captcha",
@@ -434,6 +435,9 @@ export const frTranslations = {
     "La vérification n'a pas pu être terminée à cause d'une erreur interne. Merci de contacter un administrateur.",
   "verification.message.missingVerifiedRole":
     "Vérification terminée, mais aucun rôle vérifié n'est configuré. Demandez à un administrateur d'executer `/captcha set verified-role`.",
+  "verification.message.regeneratePrompt":
+    "Nouveau captcha demandé <@{memberId}>. Saisissez le code affiché ci-dessous.",
+  "verification.message.regenerateTitle": "Captcha régénéré",
   "verification.message.retryPrompt":
     "Réponse incorrecte <@{memberId}>. Voici un nouveau captcha à résoudre.",
   "verification.message.retryTitle": "Nouvelle tentative",
