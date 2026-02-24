@@ -38,6 +38,14 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
+# Install runtime font dependencies for captcha-canvas/skia-canvas text rendering.
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  fontconfig \
+  fonts-dejavu-core \
+  fonts-noto-core \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY --from=production-deps /app/node_modules ./node_modules
 COPY --from=production-deps /app/apps/discord-bot/node_modules ./apps/discord-bot/node_modules
 COPY --from=builder /app/apps/discord-bot/package.json ./apps/discord-bot/package.json
