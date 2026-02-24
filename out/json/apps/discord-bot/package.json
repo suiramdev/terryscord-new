@@ -1,0 +1,27 @@
+{
+  "name": "discord-bot",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsdown",
+    "check-types": "tsc -b",
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run dist/index.mjs",
+    "deploy:commands": "bun run src/scripts/register-commands.ts"
+  },
+  "dependencies": {
+    "@orpc/client": "catalog:",
+    "@terryscord/db": "workspace:*",
+    "@terryscord/env": "workspace:*",
+    "captcha-canvas": "^3.4.0",
+    "discord.js": "^14.22.1",
+    "evlog": "^1.10.0",
+    "skia-canvas": "^3.0.8"
+  },
+  "devDependencies": {
+    "@terryscord/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "tsdown": "^0.16.5",
+    "typescript": "catalog:"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "name": "terryscord",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
+    "catalog": {
+      "dotenv": "^17.2.2",
+      "zod": "^4.1.13",
+      "typescript": "^5",
+      "@types/bun": "^1.3.4",
+      "elysia": "^1.4.21",
+      "@orpc/server": "^1.12.2",
+      "@orpc/openapi": "^1.12.2",
+      "@orpc/zod": "^1.12.2",
+      "better-auth": "^1.4.18",
+      "@prisma/client": "^7.2.0",
+      "@orpc/client": "^1.12.2"
+    }
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "check-types": "turbo check-types",
+    "dev:native": "turbo -F native dev",
+    "dev:bot": "turbo -F discord-bot dev",
+    "dev:web": "turbo -F web dev",
+    "dev:server": "turbo -F server dev",
+    "bot:deploy-commands": "turbo -F discord-bot deploy:commands",
+    "db:push": "turbo -F @terryscord/db db:push",
+    "db:studio": "turbo -F @terryscord/db db:studio",
+    "db:generate": "turbo -F @terryscord/db db:generate",
+    "db:migrate": "turbo -F @terryscord/db db:migrate",
+    "db:start": "turbo -F @terryscord/db db:start",
+    "db:watch": "turbo -F @terryscord/db db:watch",
+    "db:stop": "turbo -F @terryscord/db db:stop",
+    "db:down": "turbo -F @terryscord/db db:down",
+    "check": "ultracite check",
+    "fix": "ultracite fix",
+    "prepare": "husky",
+    "ruler:apply": "bunx @intellectronica/ruler@latest apply --local-only"
+  },
+  "dependencies": {
+    "@terryscord/env": "workspace:*",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@terryscord/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "husky": "latest",
+    "lint-staged": "latest",
+    "oxfmt": "latest",
+    "oxlint": "latest",
+    "turbo": "^2.6.3",
+    "typescript": "catalog:",
+    "ultracite": "7.2.3"
+  },
+  "packageManager": "bun@1.3.5",
+  "trustedDependencies": [
+    "skia-canvas"
+  ]
+}

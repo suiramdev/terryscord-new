@@ -123,6 +123,13 @@ bun x turbo prune server --docker
 
 ### Build Images
 
+Important: build with the repository root as Docker context (`.`). The app Dockerfiles rely on `turbo prune --docker`, which needs root files like `turbo.json` and the root `package.json`.
+
+If you deploy with Dokploy, set:
+
+- Build context: repository root (`.`)
+- Dockerfile path: `apps/<app-name>/Dockerfile` (for example `apps/discord-bot/Dockerfile`)
+
 ```bash
 docker build -f apps/server/Dockerfile -t terryscord-server .
 docker build -f apps/web/Dockerfile -t terryscord-web .

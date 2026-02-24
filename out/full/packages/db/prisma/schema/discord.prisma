@@ -1,0 +1,20 @@
+model GuildVerificationSetting {
+  guildId            String   @id
+  verifiedRoleId     String?
+  captchaCategoryId  String?
+  attemptAlertChannelId String?
+  captchaCaseSensitive Boolean?
+  captchaNoiseLevel  Int?
+  maxAttempts        Int?
+  timeoutSeconds     Int?
+  kickOnFailure      Boolean?
+  allowAdminAccess   Boolean?
+  channelNameFormat  String?
+  captchaType        String?
+  codeLength         Int?
+  debugLogging       Boolean?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("guild_verification_setting")
+}

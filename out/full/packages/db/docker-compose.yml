@@ -1,0 +1,23 @@
+name: terryscord
+
+services:
+  postgres:
+    image: postgres
+    container_name: terryscord-postgres
+    environment:
+      POSTGRES_DB: terryscord
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "${DATABASE_PORT:-5432}:5432"
+    volumes:
+      - terryscord_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  terryscord_postgres_data:

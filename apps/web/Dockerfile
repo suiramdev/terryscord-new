@@ -6,6 +6,7 @@ WORKDIR /app
 # Create a minimal monorepo snapshot for the web workspace.
 FROM base AS pruner
 COPY . .
+RUN test -f turbo.json || (echo "ERROR: Docker build context must be the monorepo root (.) so turbo prune can resolve workspaces." && exit 1)
 RUN bun x turbo@^2 prune web --docker
 
 # Install dependencies from the pruned package manifests only.
