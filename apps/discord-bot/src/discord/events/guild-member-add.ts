@@ -1029,28 +1029,119 @@ const awaitCollectorEndReason = async (
   return collector.endReason ?? "unknown";
 };
 
-const sendCaptchaChallenge = async ({
-  captchaAttachment,
+const resolveRecoveryChallengeMessages = async ({
   channel,
+}: {
+  channel: TextChannel;
+}): Promise<{
+  latestMessageId: string | null;
+  redundantMessageIds: string[];
+}> => {
+  try {
+    const botUserId = channel.client.user?.id;
+    if (!botUserId) {
+      return {
+        latestMessageId: null,
+        redundantMessageIds: [],
+      };
+    }
+
+    const messages = await channel.messages.fetch({ limit: 100 });
+    const challengeMessages = [...messages.values()]
+      .filter((message) => {
+        if (message.author.id !== botUserId) {
+          return false;
+        }
+
+        const hasCaptchaAttachment = message.attachments.some(
+          (attachment) => attachment.name === CAPTCHA_IMAGE_FILE_NAME
+        );
+        return hasCaptchaAttachment;
+      })
+      .toSorted((a, b) => b.createdTimestamp - a.createdTimestamp);
+
+    const [latestChallengeMessage, ...redundantChallengeMessages] =
+      challengeMessages;
+    return {
+      latestMessageId: latestChallengeMessage?.id ?? null,
+      redundantMessageIds: redundantChallengeMessages.map(
+        (message) => message.id
+      ),
+    };
+  } catch (error: unknown) {
+    log.warn({
+      channelId: channel.id,
+      err: error,
+      message: "Failed to inspect existing captcha challenge messages",
+    });
+    return {
+      latestMessageId: null,
+      redundantMessageIds: [],
+    };
+  }
+};
+
+const buildCaptchaChallengeMessageOptions = ({
+  captchaAttachment,
   member,
   promptVariant,
 }: {
   captchaAttachment: AttachmentBuilder;
-  channel: TextChannel;
   member: GuildMember;
   promptVariant: VerificationPromptVariant;
-}): Promise<string | null> => {
+}): Pick<MessageCreateOptions, "components" | "embeds" | "files"> => {
   const embed = buildVerificationPromptEmbed({
     member,
     promptVariant,
   });
 
+  return {
+    components: createCaptchaChallengeActions(),
+    embeds: [embed],
+    files: [captchaAttachment],
+  };
+};
+
+const tryReuseCaptchaChallengeMessage = async ({
+  channel,
+  existingMessageId,
+  options,
+}: {
+  channel: TextChannel;
+  existingMessageId: string | null;
+  options: Pick<MessageCreateOptions, "components" | "embeds" | "files">;
+}): Promise<string | null> => {
+  if (!existingMessageId) {
+    return null;
+  }
+
   try {
-    const sentMessage = await channel.send({
-      components: createCaptchaChallengeActions(),
-      embeds: [embed],
-      files: [captchaAttachment],
+    const existingMessage = await channel.messages.fetch(existingMessageId);
+    const editedMessage = await existingMessage.edit({
+      attachments: [],
+      ...options,
     });
+    return editedMessage.id;
+  } catch (error: unknown) {
+    log.warn({
+      channelId: channel.id,
+      err: error,
+      message: "Failed to reuse existing captcha challenge message",
+      messageId: existingMessageId,
+    });
+    return null;
+  }
+};
+
+const sendNewCaptchaChallengeMessage = async ({
+  channel,
+  options,
+}: {
+  channel: TextChannel;
+  options: Pick<MessageCreateOptions, "components" | "embeds" | "files">;
+}): Promise<string | null> => {
+  try {
+    const sentMessage = await channel.send(options);
     return sentMessage.id;
   } catch (error: unknown) {
     log.warn({
@@ -1060,6 +1151,40 @@ const sendCaptchaChallenge = async ({
     });
     return null;
   }
+};
+
+const sendCaptchaChallenge = async ({
+  captchaAttachment,
+  channel,
+  existingMessageId = null,
+  member,
+  promptVariant,
+}: {
+  captchaAttachment: AttachmentBuilder;
+  channel: TextChannel;
+  existingMessageId?: string | null;
+  member: GuildMember;
+  promptVariant: VerificationPromptVariant;
+}): Promise<string | null> => {
+  const options = buildCaptchaChallengeMessageOptions({
+    captchaAttachment,
+    member,
+    promptVariant,
+  });
+
+  const reusedMessageId = await tryReuseCaptchaChallengeMessage({
+    channel,
+    existingMessageId,
+    options,
+  });
+  if (reusedMessageId) {
+    return reusedMessageId;
+  }
+
+  return sendNewCaptchaChallengeMessage({
+    channel,
+    options,
+  });
 };
 
 const acknowledgeCaptchaRegenerateInteraction = async ({
@@ -1329,15 +1454,84 @@ const finalizeCaptchaChallenge = async ({
   });
 };
 
+const logCaptchaChallengeGenerated = ({
+  captchaCode,
+  debugEnabled,
+  member,
+  settings,
+}: {
+  captchaCode: string;
+  debugEnabled: boolean;
+  member: GuildMember;
+  settings: GuildCaptchaSettings;
+}): void => {
+  logCaptchaDebug({
+    debugEnabled,
+    message: "Generated captcha challenge",
+    payload: {
+      captchaCaseSensitive: settings.captchaCaseSensitive,
+      captchaCode,
+      captchaNoiseLevel: settings.captchaNoiseLevel,
+      codeLength: settings.codeLength,
+      guildId: member.guild.id,
+      userId: member.id,
+    },
+  });
+};
+
+const prepareReusableChallengeMessage = async ({
+  channel,
+  source,
+}: {
+  channel: TextChannel;
+  source: VerificationSource;
+}): Promise<string | null> => {
+  if (source !== "recovery") {
+    return null;
+  }
+
+  const { latestMessageId, redundantMessageIds } =
+    await resolveRecoveryChallengeMessages({
+      channel,
+    });
+  await removeCaptchaChallengeMessages({
+    channel,
+    messageIds: redundantMessageIds,
+  });
+
+  return latestMessageId;
+};
+
+const cleanupReplacedReusableChallengeMessage = async ({
+  channel,
+  reusableMessageId,
+  sentMessageId,
+}: {
+  channel: TextChannel;
+  reusableMessageId: string | null;
+  sentMessageId: string;
+}): Promise<void> => {
+  if (!reusableMessageId || reusableMessageId === sentMessageId) {
+    return;
+  }
+
+  await removeCaptchaChallengeMessages({
+    channel,
+    messageIds: [reusableMessageId],
+  });
+};
+
 const initializeCaptchaChallengeState = async ({
   channel,
   debugEnabled,
   member,
+  source,
   settings,
 }: {
   channel: TextChannel;
   debugEnabled: boolean;
   member: GuildMember;
+  source: VerificationSource;
   settings: GuildCaptchaSettings;
 }): Promise<CaptchaChallengeState> => {
   const captchaChallenge = await createCaptchaChallenge({
@@ -1348,28 +1542,34 @@ const initializeCaptchaChallengeState = async ({
     settings,
   });
 
-  logCaptchaDebug({
+  logCaptchaChallengeGenerated({
+    captchaCode: captchaChallenge.code,
     debugEnabled,
-    message: "Generated captcha challenge",
-    payload: {
-      captchaCaseSensitive: settings.captchaCaseSensitive,
-      captchaCode: captchaChallenge.code,
-      captchaNoiseLevel: settings.captchaNoiseLevel,
-      codeLength: settings.codeLength,
-      guildId: member.guild.id,
-      userId: member.id,
-    },
+    member,
+    settings,
+  });
+
+  const reusableMessageId = await prepareReusableChallengeMessage({
+    channel,
+    source,
   });
 
   const initialChallengeMessageId = await sendCaptchaChallenge({
     captchaAttachment: captchaChallenge.attachment,
     channel,
+    existingMessageId: reusableMessageId,
     member,
     promptVariant: "initial",
   });
   if (!initialChallengeMessageId) {
     throw new Error("Unable to send initial captcha challenge message.");
   }
+
+  await cleanupReplacedReusableChallengeMessage({
+    channel,
+    reusableMessageId,
+    sentMessageId: initialChallengeMessageId,
+  });
 
   challengeState.challengeMessageId = initialChallengeMessageId;
   return challengeState;
@@ -1690,11 +1890,13 @@ const runCaptchaChallenge = async ({
   channel,
   debugEnabled,
   member,
+  source,
   settings,
 }: {
   channel: TextChannel;
   debugEnabled: boolean;
   member: GuildMember;
+  source: VerificationSource;
   settings: GuildCaptchaSettings;
 }): Promise<void> => {
   const challengeState = await initializeCaptchaChallengeState({
@@ -1702,6 +1904,7 @@ const runCaptchaChallenge = async ({
     debugEnabled,
     member,
     settings,
+    source,
   });
 
   const collector = createCaptchaCollector({
@@ -1887,6 +2090,7 @@ const runVerificationWorkflow = async ({
       debugEnabled,
       member,
       settings,
+      source,
     });
   } catch (error: unknown) {
     await handleVerificationWorkflowError({
