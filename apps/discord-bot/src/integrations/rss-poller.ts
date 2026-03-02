@@ -1,7 +1,7 @@
 /* eslint-disable complexity, max-statements, no-void */
 
 import { env } from "@terryscord/env/bot";
-import { PermissionFlagsBits } from "discord.js";
+import { ChannelType, PermissionFlagsBits } from "discord.js";
 import type { Client, GuildTextBasedChannel } from "discord.js";
 import { log } from "evlog";
 
@@ -113,6 +113,35 @@ const hasChannelSendPermissions = async ({
   return permissions.has(requiredPermissions);
 };
 
+const shouldPublishRssMessage = (channel: GuildTextBasedChannel): boolean =>
+  channel.type === ChannelType.GuildAnnouncement;
+
+const tryPublishRssMessage = async ({
+  channel,
+  sentMessage,
+  subscription,
+}: {
+  channel: GuildTextBasedChannel;
+  sentMessage: Awaited<ReturnType<GuildTextBasedChannel["send"]>>;
+  subscription: RssSubscription;
+}): Promise<void> => {
+  if (!shouldPublishRssMessage(channel)) {
+    return;
+  }
+
+  try {
+    await sentMessage.crosspost();
+  } catch (error: unknown) {
+    log.warn({
+      channelId: channel.id,
+      err: error,
+      message:
+        "Failed to publish RSS message in announcement channel; keeping original message",
+      subscriptionId: subscription.id,
+    });
+  }
+};
+
 const fetchFeedOnce = async ({
   cache,
   feedUrl,
@@ -222,7 +251,12 @@ const processSubscription = async ({
 
     try {
       // Sequential sends + configurable delay reduce burst pressure on Discord rate limits.
-      await channel.send(payload);
+      const sentMessage = await channel.send(payload);
+      await tryPublishRssMessage({
+        channel,
+        sentMessage,
+        subscription,
+      });
       deliveredCount += 1;
       lastDeliveredCursor = resolveRssItemCursor(item);
       await wait(env.DISCORD_RSS_POST_DELAY_MS);
