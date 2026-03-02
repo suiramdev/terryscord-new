@@ -322,7 +322,10 @@ const collectVerificationChannelsForMember = async ({
     verificationChannels.push(guildChannel);
   }
 
-  return verificationChannels;
+  return verificationChannels.toSorted(
+    (channelA, channelB) =>
+      channelB.createdTimestamp - channelA.createdTimestamp
+  );
 };
 
 const deleteVerificationChannelsForMember = async ({
@@ -349,14 +352,30 @@ const deleteVerificationChannelsForMember = async ({
 const resolveExistingVerificationChannelForMember = async ({
   guild,
   memberId,
+  preferredChannelId = null,
 }: {
   guild: Guild;
   memberId: string;
+  preferredChannelId?: string | null;
 }): Promise<TextChannel | null> => {
   const verificationChannels = await collectVerificationChannelsForMember({
     guild,
     memberId,
   });
+  if (verificationChannels.length === 0) {
+    return null;
+  }
+
+  if (preferredChannelId) {
+    const preferredChannel =
+      verificationChannels.find(
+        (channel) => channel.id === preferredChannelId
+      ) ?? null;
+    if (preferredChannel) {
+      return preferredChannel;
+    }
+  }
+
   return verificationChannels[0] ?? null;
 };
 
@@ -1158,6 +1177,24 @@ const resolveRecoveryChallengeMessages = async ({
   }
 };
 
+const resolvePersistedChallengeMessageForRecovery = async ({
+  channel,
+  messageId,
+}: {
+  channel: TextChannel;
+  messageId: string;
+}): Promise<string | null> => {
+  try {
+    const persistedChallengeMessage = await channel.messages.fetch(messageId);
+    const hasCaptchaAttachment = persistedChallengeMessage.attachments.some(
+      (attachment) => attachment.name === CAPTCHA_IMAGE_FILE_NAME
+    );
+    return hasCaptchaAttachment ? persistedChallengeMessage.id : null;
+  } catch {
+    return null;
+  }
+};
+
 const buildCaptchaChallengeMessageOptions = ({
   captchaAttachment,
   member,
@@ -1587,6 +1624,63 @@ const prepareReusableChallengeMessage = async ({
   return latestMessageId;
 };
 
+const createRecoveryInitializationResult = ({
+  persistedState,
+  reusableMessageId,
+}: {
+  persistedState: PersistedCaptchaSessionState;
+  reusableMessageId: string | null;
+}): {
+  persistedChallengeState: CaptchaChallengeState;
+  reusableMessageId: string | null;
+} => ({
+  persistedChallengeState: createCaptchaChallengeStateFromPersistence({
+    persistedState,
+  }),
+  reusableMessageId,
+});
+
+const resolvePersistedRecoveryInitializationState = async ({
+  channel,
+  persistedState,
+  reusableMessageId,
+}: {
+  channel: TextChannel;
+  persistedState: PersistedCaptchaSessionState | null;
+  reusableMessageId: string | null;
+}): Promise<{
+  persistedChallengeState: CaptchaChallengeState;
+  reusableMessageId: string | null;
+} | null> => {
+  if (!persistedState) {
+    return null;
+  }
+
+  if (persistedState.challengeMessageId === reusableMessageId) {
+    return createRecoveryInitializationResult({
+      persistedState,
+      reusableMessageId,
+    });
+  }
+
+  if (reusableMessageId) {
+    return null;
+  }
+
+  const persistedMessageId = await resolvePersistedChallengeMessageForRecovery({
+    channel,
+    messageId: persistedState.challengeMessageId,
+  });
+  if (!persistedMessageId) {
+    return null;
+  }
+
+  return createRecoveryInitializationResult({
+    persistedState,
+    reusableMessageId: persistedMessageId,
+  });
+};
+
 const resolveRecoveryInitializationState = async ({
   channel,
   member,
@@ -1616,20 +1710,18 @@ const resolveRecoveryInitializationState = async ({
     }),
   ]);
 
-  if (
-    !persistedState ||
-    persistedState.challengeMessageId !== reusableMessageId
-  ) {
-    return {
-      persistedChallengeState: null,
+  const persistedRecoveryState =
+    await resolvePersistedRecoveryInitializationState({
+      channel,
+      persistedState,
       reusableMessageId,
-    };
+    });
+  if (persistedRecoveryState) {
+    return persistedRecoveryState;
   }
 
   return {
-    persistedChallengeState: createCaptchaChallengeStateFromPersistence({
-      persistedState,
-    }),
+    persistedChallengeState: null,
     reusableMessageId,
   };
 };
@@ -2162,6 +2254,23 @@ const handleVerificationWorkflowError = async ({
   });
 };
 
+const resolveRecoveryVerificationChannel = async ({
+  member,
+}: {
+  member: GuildMember;
+}): Promise<TextChannel | null> => {
+  const persistedState = await getPersistedCaptchaSessionState({
+    guildId: member.guild.id,
+    userId: member.id,
+  });
+
+  return await resolveExistingVerificationChannelForMember({
+    guild: member.guild,
+    memberId: member.id,
+    preferredChannelId: persistedState?.verificationChannelId,
+  });
+};
+
 const resolveVerificationChannelForWorkflow = async ({
   debugEnabled,
   member,
@@ -2186,9 +2295,8 @@ const resolveVerificationChannelForWorkflow = async ({
     });
   }
 
-  const existingChannel = await resolveExistingVerificationChannelForMember({
-    guild: member.guild,
-    memberId: member.id,
+  const existingChannel = await resolveRecoveryVerificationChannel({
+    member,
   });
   if (existingChannel) {
     return existingChannel;
