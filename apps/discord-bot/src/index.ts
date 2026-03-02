@@ -1,3 +1,5 @@
+/* eslint-disable max-statements */
+
 import { env } from "@terryscord/env/bot";
 import type { Client } from "discord.js";
 import { initLogger, log } from "evlog";
@@ -6,12 +8,14 @@ import { commands } from "./commands";
 import { createDiscordClient } from "./discord/client";
 import { registerEventHandlers } from "./discord/events";
 import { registerApplicationCommands } from "./discord/register-commands";
+import { startRssSubscriptionPolling } from "./integrations/rss-poller";
 import { runStartupChecks } from "./integrations/startup";
 import { evlogConfig } from "./logging";
 
 interface BotRuntimeState {
   bootId: number;
   client: Client | null;
+  stopRssPoller: (() => void) | null;
   unregisterShutdownHandlers: (() => void) | null;
 }
 
@@ -25,6 +29,7 @@ const getRuntimeState = (): BotRuntimeState => {
   globalThis.__terryscordDiscordBotRuntime ??= {
     bootId: 0,
     client: null,
+    stopRssPoller: null,
     unregisterShutdownHandlers: null,
   };
 
@@ -65,12 +70,16 @@ const registerShutdownHandlers = ({
   };
 };
 
-const runReadyTasks = async (): Promise<void> => {
+const runReadyTasks = async (client: Client<true>): Promise<void> => {
   if (env.DISCORD_SYNC_COMMANDS_ON_BOOT) {
     await registerApplicationCommands(commands);
   }
 
   await runStartupChecks();
+
+  const runtime = getRuntimeState();
+  runtime.stopRssPoller?.();
+  runtime.stopRssPoller = startRssSubscriptionPolling(client);
 };
 
 const createShutdownHandler = (
@@ -92,6 +101,8 @@ const createShutdownHandler = (
     const runtime = getRuntimeState();
     runtime.unregisterShutdownHandlers?.();
     runtime.unregisterShutdownHandlers = null;
+    runtime.stopRssPoller?.();
+    runtime.stopRssPoller = null;
     runtime.client = null;
 
     client.destroy();
@@ -104,6 +115,8 @@ const destroyPreviousRuntime = (): void => {
 
   runtime.unregisterShutdownHandlers?.();
   runtime.unregisterShutdownHandlers = null;
+  runtime.stopRssPoller?.();
+  runtime.stopRssPoller = null;
 
   if (runtime.client) {
     log.info({

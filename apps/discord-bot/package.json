@@ -16,6 +16,7 @@
     "captcha-canvas": "^3.4.0",
     "discord.js": "^14.22.1",
     "evlog": "^1.10.0",
+    "rss-parser": "^3.13.0",
     "skia-canvas": "^3.0.8"
   },
   "devDependencies": {
