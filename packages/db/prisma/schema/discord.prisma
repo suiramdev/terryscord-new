@@ -42,3 +42,20 @@ model GuildVerificationSession {
   @@id([guildId, userId])
   @@map("guild_verification_session")
 }
+
+model GuildRssSubscription {
+  id                String    @id
+  guildId           String
+  channelId         String
+  feedUrl           String
+  messageStyleJson  String
+  lastItemId        String?
+  lastItemPublishedAt DateTime?
+  createdByUserId   String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([guildId, channelId, feedUrl], map: "guild_rss_subscription_unique")
+  @@index([feedUrl], map: "guild_rss_subscription_feed_idx")
+  @@map("guild_rss_subscription")
+}

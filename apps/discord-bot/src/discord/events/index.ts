@@ -15,7 +15,7 @@ import { handleReady } from "./ready";
 
 interface RegisterEventHandlersOptions {
   client: Client;
-  onReady?: () => Promise<void>;
+  onReady?: (client: Client<true>) => Promise<void>;
 }
 
 export const registerEventHandlers = ({

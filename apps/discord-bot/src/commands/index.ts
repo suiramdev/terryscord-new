@@ -3,6 +3,7 @@ import { deleteCategoryChannelsCommand } from "./delete-category-channels";
 import { embedCommand } from "./embed";
 import { helloCommand } from "./hello";
 import { rolePickButtonCommand } from "./role-pick-button";
+import { rssCommand } from "./rss";
 import type { SlashCommand } from "./types";
 
 export const commands: readonly SlashCommand[] = [
@@ -10,6 +11,7 @@ export const commands: readonly SlashCommand[] = [
   deleteCategoryChannelsCommand,
   embedCommand,
   helloCommand,
+  rssCommand,
   rolePickButtonCommand,
 ];
 
