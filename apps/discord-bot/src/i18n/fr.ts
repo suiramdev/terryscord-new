@@ -193,14 +193,14 @@ export const frTranslations = {
   "channelUpdater.show.source": "Source",
   "channelUpdater.show.template": "Modèle",
   "channelUpdater.success.channelSet": "Salon mis à jour : <#{channelId}>.",
-  "channelUpdater.success.created":
-    "Renommeur créé avec l'identifiant `{updaterId}`.",
-  "channelUpdater.success.deleted": "Renommeur `{updaterId}` supprimé.",
-  "channelUpdater.success.disabled": "Renommeur `{updaterId}` désactivé.",
-  "channelUpdater.success.enabled": "Renommeur `{updaterId}` activé.",
+  "channelUpdater.success.created": "Renommeur créé pour <#{channelId}>.",
+  "channelUpdater.success.deleted": "Renommeur supprimé pour <#{channelId}>.",
+  "channelUpdater.success.disabled": "Renommeur désactivé pour <#{channelId}>.",
+  "channelUpdater.success.enabled": "Renommeur activé pour <#{channelId}>.",
   "channelUpdater.success.intervalSet":
     "Intervalle mis à jour : {interval} minutes.",
   "channelUpdater.success.templateSet": "Modèle mis à jour : `{template}`.",
+  "channelUpdater.success.updated": "Renommeur mis à jour pour <#{channelId}>.",
   "commands.captcha.description":
     "Gérer les paramètres de vérification captcha",
   "commands.captcha.groupSet.description":

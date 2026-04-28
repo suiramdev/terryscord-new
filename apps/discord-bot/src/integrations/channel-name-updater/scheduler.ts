@@ -134,7 +134,7 @@ const processUpdater = async ({
   if (placeholders.length === 0) {
     log.warn({
       message: "Channel name updater template contains no placeholders",
-      updaterId: updater.id,
+      updaterId: updater.channelId,
     });
 
     return false;
@@ -149,7 +149,7 @@ const processUpdater = async ({
   if (values === null) {
     log.debug({
       message: "No variable values resolved for channel name updater",
-      updaterId: updater.id,
+      updaterId: updater.channelId,
     });
 
     return false;
@@ -166,7 +166,7 @@ const processUpdater = async ({
       channelId: updater.channelId,
       guildId: updater.guildId,
       message: "Channel name updater target channel not found",
-      updaterId: updater.id,
+      updaterId: updater.channelId,
     });
 
     return false;
@@ -177,7 +177,7 @@ const processUpdater = async ({
       channelId: channel.id,
       guildId: updater.guildId,
       message: "Bot lacks Manage Channels permission for channel name updater",
-      updaterId: updater.id,
+      updaterId: updater.channelId,
     });
 
     return false;
@@ -190,13 +190,13 @@ const processUpdater = async ({
       channelId: channel.id,
       message: "Channel name contains unreplaced placeholders",
       name: newName,
-      updaterId: updater.id,
+      updaterId: updater.channelId,
     });
   }
 
   if (channel.name === newName) {
     await updateChannelNameUpdater({
-      id: updater.id,
+      channelId: updater.channelId,
       patch: { lastUpdatedAt: new Date() },
     });
 
@@ -207,7 +207,7 @@ const processUpdater = async ({
     await channel.setName(newName, "Mise à jour automatique du nom de salon");
 
     await updateChannelNameUpdater({
-      id: updater.id,
+      channelId: updater.channelId,
       patch: { lastUpdatedAt: new Date() },
     });
 
@@ -216,7 +216,7 @@ const processUpdater = async ({
       guildId: updater.guildId,
       message: "Updated channel name via updater",
       newName,
-      updaterId: updater.id,
+      updaterId: updater.channelId,
     });
 
     return true;
@@ -225,7 +225,7 @@ const processUpdater = async ({
       channelId: channel.id,
       err: error,
       message: "Failed to update channel name",
-      updaterId: updater.id,
+      updaterId: updater.channelId,
     });
 
     return false;

@@ -10,7 +10,6 @@ import type { ChatInputCommandInteraction, GuildChannel } from "discord.js";
 import { replyWithEmbed } from "@/discord/embeds";
 import { t } from "@/i18n";
 import {
-  createChannelNameUpdater,
   deleteChannelNameUpdater,
   getAllVariableKeys,
   getChannelNameUpdater,
@@ -26,7 +25,6 @@ const CREATE_SUBCOMMAND = "create";
 const DELETE_SUBCOMMAND = "delete";
 const LIST_SUBCOMMAND = "list";
 const SET_GROUP = "set";
-const SET_CHANNEL = "channel";
 const SET_ENABLED = "enabled";
 const SET_INTERVAL = "interval";
 const SET_TEMPLATE = "template";
@@ -88,12 +86,12 @@ const requireAdminAndGuild = (
   return { errorMessage: null, guildId: interaction.guildId };
 };
 
-const resolveUpdaterOrReply = async ({
+const resolveChannelUpdaterOrReply = async ({
+  channelId,
   interaction,
-  updaterId,
 }: {
+  channelId: string;
   interaction: ChatInputCommandInteraction;
-  updaterId: string;
 }): Promise<
   | { errorMessage: string; updater: null }
   | {
@@ -101,7 +99,7 @@ const resolveUpdaterOrReply = async ({
       updater: Awaited<ReturnType<typeof getChannelNameUpdater>>;
     }
 > => {
-  const updater = await getChannelNameUpdater(updaterId);
+  const updater = await getChannelNameUpdater(channelId);
 
   if (!updater) {
     return {
@@ -204,20 +202,47 @@ const handleCreate = async (
     return;
   }
 
+  const existing = await getChannelNameUpdater(channel.id);
+
   try {
-    const updater = await createChannelNameUpdater({
+    if (existing) {
+      await updateChannelNameUpdater({
+        channelId: channel.id,
+        patch: {
+          enabled: true,
+          nameTemplate: template,
+          updateIntervalMinutes: intervalMinutes,
+        },
+      });
+
+      await replyWithEmbed({
+        interaction,
+        message: t(
+          "channelUpdater.success.updated",
+          { channelId: channel.id },
+          locale
+        ),
+        tone: "success",
+      });
+
+      return;
+    }
+
+    await updateChannelNameUpdater({
       channelId: channel.id,
-      enabled: true,
-      guildId,
-      nameTemplate: template,
-      updateIntervalMinutes: intervalMinutes,
+      patch: {
+        enabled: true,
+        lastUpdatedAt: null,
+        nameTemplate: template,
+        updateIntervalMinutes: intervalMinutes,
+      },
     });
 
     await replyWithEmbed({
       interaction,
       message: t(
         "channelUpdater.success.created",
-        { updaterId: updater.id },
+        { channelId: channel.id },
         locale
       ),
       tone: "success",
@@ -247,23 +272,24 @@ const handleDelete = async (
     return;
   }
 
-  const updaterId = interaction.options.getString("id", true).trim();
-  const { errorMessage: resolveError, updater } = await resolveUpdaterOrReply({
+  const channel = interaction.options.getChannel("channel", true);
+
+  const { errorMessage: resolveError } = await resolveChannelUpdaterOrReply({
+    channelId: channel.id,
     interaction,
-    updaterId,
   });
 
-  if (resolveError || !updater) {
+  if (resolveError) {
     await replyWithEmbed({
       interaction,
-      message: resolveError ?? t("channelUpdater.errors.updaterNotFound"),
+      message: resolveError,
       tone: "error",
     });
 
     return;
   }
 
-  const deleted = await deleteChannelNameUpdater(updaterId);
+  const deleted = await deleteChannelNameUpdater(channel.id);
 
   if (!deleted) {
     await replyWithEmbed({
@@ -277,7 +303,11 @@ const handleDelete = async (
 
   await replyWithEmbed({
     interaction,
-    message: t("channelUpdater.success.deleted", { updaterId }, locale),
+    message: t(
+      "channelUpdater.success.deleted",
+      { channelId: channel.id },
+      locale
+    ),
     tone: "success",
   });
 };
@@ -313,8 +343,7 @@ const handleList = async (
     const status = updater.enabled ? t("common.enabled") : t("common.disabled");
 
     return [
-      `**\`${updater.id}\`** — ${status}`,
-      `  ${t("channelUpdater.show.channel")}: <#${updater.channelId}>`,
+      `**<#${updater.channelId}>** — ${status}`,
       `  ${t("channelUpdater.show.template")}: \`${updater.nameTemplate}\``,
       `  ${t("channelUpdater.show.interval")}: ${updater.updateIntervalMinutes}min`,
     ].join("\n");
@@ -324,76 +353,6 @@ const handleList = async (
     interaction,
     message: lines.join("\n\n"),
     tone: "info",
-  });
-};
-
-const handleSetChannel = async (
-  interaction: ChatInputCommandInteraction
-): Promise<void> => {
-  const locale = interaction.locale ?? interaction.guildLocale ?? undefined;
-  const { errorMessage, guildId } = requireAdminAndGuild(interaction);
-
-  if (errorMessage || !guildId) {
-    await replyWithEmbed({
-      interaction,
-      message: errorMessage ?? t("channelUpdater.errors.serverOnly"),
-      tone: "error",
-    });
-
-    return;
-  }
-
-  const updaterId = interaction.options.getString("id", true).trim();
-  const channel = interaction.options.getChannel("channel", true);
-
-  const { errorMessage: resolveError, updater } = await resolveUpdaterOrReply({
-    interaction,
-    updaterId,
-  });
-
-  if (resolveError || !updater) {
-    await replyWithEmbed({
-      interaction,
-      message: resolveError ?? t("channelUpdater.errors.updaterNotFound"),
-      tone: "error",
-    });
-
-    return;
-  }
-
-  if (channel.type !== ChannelType.GuildText) {
-    await replyWithEmbed({
-      interaction,
-      message: t("channelUpdater.errors.invalidChannelType"),
-      tone: "error",
-    });
-
-    return;
-  }
-
-  const updated = await updateChannelNameUpdater({
-    id: updaterId,
-    patch: { channelId: channel.id },
-  });
-
-  if (!updated) {
-    await replyWithEmbed({
-      interaction,
-      message: t("channelUpdater.errors.saveFailed"),
-      tone: "error",
-    });
-
-    return;
-  }
-
-  await replyWithEmbed({
-    interaction,
-    message: t(
-      "channelUpdater.success.channelSet",
-      { channelId: channel.id },
-      locale
-    ),
-    tone: "success",
   });
 };
 
@@ -413,18 +372,18 @@ const handleSetEnabled = async (
     return;
   }
 
-  const updaterId = interaction.options.getString("id", true).trim();
+  const channel = interaction.options.getChannel("channel", true);
   const enabled = interaction.options.getBoolean("enabled", true);
 
-  const { errorMessage: resolveError, updater } = await resolveUpdaterOrReply({
+  const { errorMessage: resolveError } = await resolveChannelUpdaterOrReply({
+    channelId: channel.id,
     interaction,
-    updaterId,
   });
 
-  if (resolveError || !updater) {
+  if (resolveError) {
     await replyWithEmbed({
       interaction,
-      message: resolveError ?? t("channelUpdater.errors.updaterNotFound"),
+      message: resolveError,
       tone: "error",
     });
 
@@ -432,7 +391,7 @@ const handleSetEnabled = async (
   }
 
   const updated = await updateChannelNameUpdater({
-    id: updaterId,
+    channelId: channel.id,
     patch: { enabled },
   });
 
@@ -452,7 +411,7 @@ const handleSetEnabled = async (
       enabled
         ? "channelUpdater.success.enabled"
         : "channelUpdater.success.disabled",
-      { updaterId },
+      { channelId: channel.id },
       locale
     ),
     tone: "success",
@@ -475,18 +434,18 @@ const handleSetInterval = async (
     return;
   }
 
-  const updaterId = interaction.options.getString("id", true).trim();
+  const channel = interaction.options.getChannel("channel", true);
   const intervalMinutes = interaction.options.getInteger("interval", true);
 
-  const { errorMessage: resolveError, updater } = await resolveUpdaterOrReply({
+  const { errorMessage: resolveError } = await resolveChannelUpdaterOrReply({
+    channelId: channel.id,
     interaction,
-    updaterId,
   });
 
-  if (resolveError || !updater) {
+  if (resolveError) {
     await replyWithEmbed({
       interaction,
-      message: resolveError ?? t("channelUpdater.errors.updaterNotFound"),
+      message: resolveError,
       tone: "error",
     });
 
@@ -510,7 +469,7 @@ const handleSetInterval = async (
   }
 
   const updated = await updateChannelNameUpdater({
-    id: updaterId,
+    channelId: channel.id,
     patch: { updateIntervalMinutes: intervalMinutes },
   });
 
@@ -551,18 +510,18 @@ const handleSetTemplate = async (
     return;
   }
 
-  const updaterId = interaction.options.getString("id", true).trim();
+  const channel = interaction.options.getChannel("channel", true);
   const template = interaction.options.getString("template", true).trim();
 
-  const { errorMessage: resolveError, updater } = await resolveUpdaterOrReply({
+  const { errorMessage: resolveError } = await resolveChannelUpdaterOrReply({
+    channelId: channel.id,
     interaction,
-    updaterId,
   });
 
-  if (resolveError || !updater) {
+  if (resolveError) {
     await replyWithEmbed({
       interaction,
-      message: resolveError ?? t("channelUpdater.errors.updaterNotFound"),
+      message: resolveError,
       tone: "error",
     });
 
@@ -592,7 +551,7 @@ const handleSetTemplate = async (
   }
 
   const updated = await updateChannelNameUpdater({
-    id: updaterId,
+    channelId: channel.id,
     patch: { nameTemplate: template },
   });
 
@@ -628,11 +587,12 @@ const handleShow = async (
     return;
   }
 
-  const updaterId = interaction.options.getString("id", true).trim();
-  const { errorMessage: resolveError, updater } = await resolveUpdaterOrReply({
-    interaction,
-    updaterId,
-  });
+  const channel = interaction.options.getChannel("channel", true);
+  const { errorMessage: resolveError, updater } =
+    await resolveChannelUpdaterOrReply({
+      channelId: channel.id,
+      interaction,
+    });
 
   if (resolveError || !updater) {
     await replyWithEmbed({
@@ -645,9 +605,8 @@ const handleShow = async (
   }
 
   const lines = [
-    `**ID**: \`${updater.id}\``,
+    `**${t("channelUpdater.show.channel")}**: <#${updater.channelId}>`,
     `${t("channelUpdater.show.enabled")}: ${updater.enabled ? t("common.enabled") : t("common.disabled")}`,
-    `${t("channelUpdater.show.channel")}: <#${updater.channelId}>`,
     `${t("channelUpdater.show.template")}: \`${updater.nameTemplate}\``,
     `${t("channelUpdater.show.interval")}: ${updater.updateIntervalMinutes}min`,
     `${t("channelUpdater.show.lastUpdated")}: ${updater.lastUpdatedAt ? updater.lastUpdatedAt.toLocaleString("fr-FR") : t("common.notConfigured")}`,
@@ -719,11 +678,14 @@ export const channelUpdaterCommand: SlashCommand = {
       sub
         .setName(DELETE_SUBCOMMAND)
         .setDescription(t("commands.channelUpdater.sub.delete.description"))
-        .addStringOption((option) =>
+        .addChannelOption((option) =>
           option
-            .setName("id")
-            .setDescription(t("commands.channelUpdater.option.id.description"))
+            .setName("channel")
+            .setDescription(
+              t("commands.channelUpdater.option.channel.description")
+            )
             .setRequired(true)
+            .addChannelTypes(ChannelType.GuildText)
         )
     )
     .addSubcommand((sub) =>
@@ -737,17 +699,9 @@ export const channelUpdaterCommand: SlashCommand = {
         .setDescription(t("commands.channelUpdater.groupSet.description"))
         .addSubcommand((sub) =>
           sub
-            .setName(SET_CHANNEL)
+            .setName(SET_ENABLED)
             .setDescription(
-              t("commands.channelUpdater.sub.setChannel.description")
-            )
-            .addStringOption((option) =>
-              option
-                .setName("id")
-                .setDescription(
-                  t("commands.channelUpdater.option.id.description")
-                )
-                .setRequired(true)
+              t("commands.channelUpdater.sub.setEnabled.description")
             )
             .addChannelOption((option) =>
               option
@@ -757,21 +711,6 @@ export const channelUpdaterCommand: SlashCommand = {
                 )
                 .setRequired(true)
                 .addChannelTypes(ChannelType.GuildText)
-            )
-        )
-        .addSubcommand((sub) =>
-          sub
-            .setName(SET_ENABLED)
-            .setDescription(
-              t("commands.channelUpdater.sub.setEnabled.description")
-            )
-            .addStringOption((option) =>
-              option
-                .setName("id")
-                .setDescription(
-                  t("commands.channelUpdater.option.id.description")
-                )
-                .setRequired(true)
             )
             .addBooleanOption((option) =>
               option
@@ -788,13 +727,14 @@ export const channelUpdaterCommand: SlashCommand = {
             .setDescription(
               t("commands.channelUpdater.sub.setInterval.description")
             )
-            .addStringOption((option) =>
+            .addChannelOption((option) =>
               option
-                .setName("id")
+                .setName("channel")
                 .setDescription(
-                  t("commands.channelUpdater.option.id.description")
+                  t("commands.channelUpdater.option.channel.description")
                 )
                 .setRequired(true)
+                .addChannelTypes(ChannelType.GuildText)
             )
             .addIntegerOption((option) =>
               option
@@ -813,13 +753,14 @@ export const channelUpdaterCommand: SlashCommand = {
             .setDescription(
               t("commands.channelUpdater.sub.setTemplate.description")
             )
-            .addStringOption((option) =>
+            .addChannelOption((option) =>
               option
-                .setName("id")
+                .setName("channel")
                 .setDescription(
-                  t("commands.channelUpdater.option.id.description")
+                  t("commands.channelUpdater.option.channel.description")
                 )
                 .setRequired(true)
+                .addChannelTypes(ChannelType.GuildText)
             )
             .addStringOption((option) =>
               option
@@ -836,11 +777,14 @@ export const channelUpdaterCommand: SlashCommand = {
       sub
         .setName(SHOW_SUBCOMMAND)
         .setDescription(t("commands.channelUpdater.sub.show.description"))
-        .addStringOption((option) =>
+        .addChannelOption((option) =>
           option
-            .setName("id")
-            .setDescription(t("commands.channelUpdater.option.id.description"))
+            .setName("channel")
+            .setDescription(
+              t("commands.channelUpdater.option.channel.description")
+            )
             .setRequired(true)
+            .addChannelTypes(ChannelType.GuildText)
         )
     )
     .addSubcommand((sub) =>
@@ -868,11 +812,6 @@ export const channelUpdaterCommand: SlashCommand = {
     }
 
     if (group === SET_GROUP) {
-      if (subcommand === SET_CHANNEL) {
-        await handleSetChannel(interaction);
-        return;
-      }
-
       if (subcommand === SET_ENABLED) {
         await handleSetEnabled(interaction);
         return;

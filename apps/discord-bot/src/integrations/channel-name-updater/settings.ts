@@ -5,7 +5,6 @@ export interface ChannelNameUpdater {
   createdAt: Date;
   enabled: boolean;
   guildId: string;
-  id: string;
   lastUpdatedAt: Date | null;
   nameTemplate: string;
   updateIntervalMinutes: number;
@@ -13,7 +12,6 @@ export interface ChannelNameUpdater {
 }
 
 export interface ChannelNameUpdaterPatch {
-  channelId?: string | null;
   enabled?: boolean | null;
   lastUpdatedAt?: Date | null;
   nameTemplate?: string | null;
@@ -25,7 +23,6 @@ interface ChannelNameUpdaterRecord {
   createdAt: Date | string;
   enabled: boolean;
   guildId: string;
-  id: string;
   lastUpdatedAt: Date | string | null;
   nameTemplate: string;
   updateIntervalMinutes: number;
@@ -77,16 +74,15 @@ const ensureSchema = async (
   ensureSchemaPromise = (async (): Promise<void> => {
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "guild_channel_name_updater" (
-        "id" TEXT NOT NULL,
-        "guildId" TEXT NOT NULL,
         "channelId" TEXT NOT NULL,
+        "guildId" TEXT NOT NULL,
         "nameTemplate" TEXT NOT NULL,
         "updateIntervalMinutes" INTEGER NOT NULL DEFAULT 10,
         "enabled" BOOLEAN NOT NULL DEFAULT false,
         "lastUpdatedAt" TIMESTAMP(3),
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "guild_channel_name_updater_pkey" PRIMARY KEY ("id")
+        CONSTRAINT "guild_channel_name_updater_pkey" PRIMARY KEY ("channelId")
       )
     `);
   })();
@@ -121,7 +117,6 @@ const toUpdater = (record: ChannelNameUpdaterRecord): ChannelNameUpdater => ({
   createdAt: toDate(record.createdAt),
   enabled: record.enabled,
   guildId: record.guildId,
-  id: record.id,
   lastUpdatedAt: toOptionalDate(record.lastUpdatedAt),
   nameTemplate: record.nameTemplate,
   updateIntervalMinutes: record.updateIntervalMinutes,
@@ -165,22 +160,22 @@ export const createChannelNameUpdater = async ({
 };
 
 export const deleteChannelNameUpdater = async (
-  id: string
+  channelId: string
 ): Promise<boolean> => {
   try {
     const prisma = await loadPrismaClient();
     await ensureSchema(prisma);
 
     await prisma.guildChannelNameUpdater.delete({
-      where: { id },
+      where: { channelId },
     });
 
     return true;
   } catch (error: unknown) {
     log.error({
+      channelId,
       err: error,
       message: "Failed to delete channel name updater",
-      updaterId: id,
     });
 
     return false;
@@ -188,22 +183,22 @@ export const deleteChannelNameUpdater = async (
 };
 
 export const getChannelNameUpdater = async (
-  id: string
+  channelId: string
 ): Promise<ChannelNameUpdater | null> => {
   try {
     const prisma = await loadPrismaClient();
     await ensureSchema(prisma);
 
     const record = await prisma.guildChannelNameUpdater.findUnique({
-      where: { id },
+      where: { channelId },
     });
 
     return record ? toUpdater(record) : null;
   } catch (error: unknown) {
     log.error({
+      channelId,
       err: error,
       message: "Failed to fetch channel name updater",
-      updaterId: id,
     });
 
     return null;
@@ -256,15 +251,15 @@ export const listGuildChannelNameUpdaters = async (
 };
 
 export const updateChannelNameUpdater = async ({
-  id,
+  channelId,
   patch,
 }: {
-  id: string;
+  channelId: string;
   patch: ChannelNameUpdaterPatch;
 }): Promise<ChannelNameUpdater | null> => {
   const updatePatch = compactPatch(patch);
   if (Object.keys(updatePatch).length === 0) {
-    return getChannelNameUpdater(id);
+    return getChannelNameUpdater(channelId);
   }
 
   try {
@@ -273,16 +268,16 @@ export const updateChannelNameUpdater = async ({
 
     const record = await prisma.guildChannelNameUpdater.update({
       data: updatePatch,
-      where: { id },
+      where: { channelId },
     });
 
     return toUpdater(record);
   } catch (error: unknown) {
     log.error({
+      channelId,
       err: error,
       message: "Failed to update channel name updater",
       patch: updatePatch,
-      updaterId: id,
     });
 
     return null;
