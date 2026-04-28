@@ -63,6 +63,9 @@ const buildChannelName = (
   return result;
 };
 
+const hasUnreplacedPlaceholders = (name: string): boolean =>
+  /\{[a-zA-Z0-9_]+\}/.test(name);
+
 const shouldRunUpdater = (updater: ChannelNameUpdater): boolean => {
   if (!updater.lastUpdatedAt) {
     return true;
@@ -98,7 +101,8 @@ const processUpdater = async ({
 
   const values = await provider.fetchValues(
     updater.guildId,
-    updater.sourceConfig ?? undefined
+    updater.sourceConfig ?? undefined,
+    client
   );
 
   if (values === null) {
@@ -140,6 +144,15 @@ const processUpdater = async ({
   }
 
   const newName = buildChannelName(updater.nameTemplate, values);
+
+  if (hasUnreplacedPlaceholders(newName)) {
+    log.warn({
+      channelId: channel.id,
+      message: "Channel name contains unreplaced placeholders",
+      name: newName,
+      updaterId: updater.id,
+    });
+  }
 
   if (channel.name === newName) {
     await updateChannelNameUpdater({

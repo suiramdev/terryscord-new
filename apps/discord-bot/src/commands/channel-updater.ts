@@ -35,6 +35,44 @@ const SOURCES_SUBCOMMAND = "sources";
 const MIN_INTERVAL_MINUTES = 10;
 const MAX_INTERVAL_MINUTES = 1440;
 
+const extractPlaceholders = (template: string): string[] => {
+  const matches = template.matchAll(/\{([a-zA-Z0-9_]+)\}/g);
+  return [
+    ...new Set(
+      [...matches]
+        .map((match) => match[1])
+        .filter((value): value is string => typeof value === "string")
+    ),
+  ];
+};
+
+const validateTemplatePlaceholders = ({
+  provider,
+  template,
+}: {
+  provider: { providedKeys: string[]; type: string };
+  template: string;
+}): string | null => {
+  const placeholders = extractPlaceholders(template);
+
+  if (placeholders.length === 0) {
+    return t("channelUpdater.errors.missingPlaceholder");
+  }
+
+  const unknown = placeholders.filter(
+    (key) => !provider.providedKeys.includes(key)
+  );
+
+  if (unknown.length > 0) {
+    return t("channelUpdater.errors.unknownPlaceholders", {
+      keys: unknown.map((k) => `{${k}}`).join(", "),
+      source: provider.type,
+    });
+  }
+
+  return null;
+};
+
 const requireAdminAndGuild = (
   interaction: ChatInputCommandInteraction
 ):
@@ -123,10 +161,27 @@ const handleCreate = async (
   }
 
   const providers = listValueProviders();
-  if (!providers.some((p) => p.type === sourceType)) {
+  const provider = providers.find((p) => p.type === sourceType);
+
+  if (!provider) {
     await replyWithEmbed({
       interaction,
       message: t("channelUpdater.errors.unknownSourceType"),
+      tone: "error",
+    });
+
+    return;
+  }
+
+  const placeholderError = validateTemplatePlaceholders({
+    provider,
+    template,
+  });
+
+  if (placeholderError) {
+    await replyWithEmbed({
+      interaction,
+      message: placeholderError,
       tone: "error",
     });
 
@@ -555,6 +610,27 @@ const handleSetTemplate = async (
     return;
   }
 
+  const provider = listValueProviders().find(
+    (p) => p.type === updater.sourceType
+  );
+
+  if (provider) {
+    const placeholderError = validateTemplatePlaceholders({
+      provider,
+      template,
+    });
+
+    if (placeholderError) {
+      await replyWithEmbed({
+        interaction,
+        message: placeholderError,
+        tone: "error",
+      });
+
+      return;
+    }
+  }
+
   const updated = await updateChannelNameUpdater({
     id: updaterId,
     patch: { nameTemplate: template },
@@ -634,10 +710,12 @@ const handleSources = async (
   const providers = listValueProviders();
 
   const lines = providers.map((provider) => {
+    const placeholderList = provider.providedKeys
+      .map((key) => `{${key}}`)
+      .join(", ");
+
     const placeholders = t("channelUpdater.info.sourcePlaceholders", {
-      placeholders: Object.keys(provider.fetchValues)
-        .map(() => "{count}")
-        .join(", "),
+      placeholders: placeholderList,
     });
 
     return `**${provider.type}** — ${provider.description}\n  ${placeholders}`;
@@ -686,6 +764,7 @@ export const channelUpdaterCommand: SlashCommand = {
             )
             .setRequired(true)
             .addChoices(
+              { name: "Discord Server Stats", value: "discord_server" },
               { name: "Steam Players (s&box)", value: "steam_players" },
               { name: "Active Giveaways", value: "active_giveaways" }
             )

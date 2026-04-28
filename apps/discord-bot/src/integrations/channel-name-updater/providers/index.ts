@@ -1,12 +1,17 @@
+import type { Client } from "discord.js";
+
 import { fetchActiveGiveawayCount } from "./active-giveaways";
+import { fetchDiscordServerStats } from "./discord-server";
 import { fetchSteamPlayerCount } from "./steam-players";
 
 export interface ValueProvider {
   description: string;
   fetchValues: (
     guildId: string,
-    config?: unknown
+    config: unknown | undefined,
+    client: Client<true>
   ) => Promise<Record<string, string | number> | null>;
+  providedKeys: string[];
   type: string;
 }
 
@@ -21,6 +26,7 @@ const providers: ValueProvider[] = [
 
       return { count };
     },
+    providedKeys: ["count"],
     type: "steam_players",
   },
   {
@@ -33,7 +39,29 @@ const providers: ValueProvider[] = [
 
       return { count };
     },
+    providedKeys: ["count"],
     type: "active_giveaways",
+  },
+  {
+    description: "Statistiques du serveur Discord (membres, boosts, tier)",
+    async fetchValues(
+      guildId: string,
+      _config: unknown | undefined,
+      client: Client<true>
+    ) {
+      const stats = await fetchDiscordServerStats(client, guildId);
+      if (stats === null) {
+        return null;
+      }
+
+      return {
+        boosts: stats.boosts as number,
+        members: stats.members as number,
+        tier: stats.tier as number,
+      };
+    },
+    providedKeys: ["members", "boosts", "tier"],
+    type: "discord_server",
   },
 ];
 

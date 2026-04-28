@@ -168,11 +168,15 @@ export const frTranslations = {
     "L'intervalle doit être compris entre {min} et {max} minutes.",
   "channelUpdater.errors.invalidChannelType":
     "Le salon sélectionné doit être un salon texte.",
+  "channelUpdater.errors.missingPlaceholder":
+    "Le modèle doit contenir au moins un placeholder valide.",
   "channelUpdater.errors.saveFailed": "Échec de l'enregistrement. Réessayez.",
   "channelUpdater.errors.serverOnly":
     "Cette commande peut uniquement être utilisée dans un serveur.",
   "channelUpdater.errors.templateLength":
     "Le modèle doit contenir entre 1 et 100 caractères.",
+  "channelUpdater.errors.unknownPlaceholders":
+    "Placeholders inconnus pour la source `{source}` : {keys}",
   "channelUpdater.errors.unknownSourceType": "Source de données inconnue.",
   "channelUpdater.errors.unsupportedSubcommand":
     "Sous-commande non prise en charge.",
