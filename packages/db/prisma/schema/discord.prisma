@@ -106,13 +106,10 @@ model GuildGiveawaySetting {
 }
 
 model GuildChannelNameUpdater {
-  id                    String   @id @default(cuid())
+  channelId             String   @id
   guildId               String
-  channelId             String
   nameTemplate          String
   updateIntervalMinutes Int      @default(10)
-  sourceType            String
-  sourceConfig          String?
   enabled               Boolean  @default(false)
   lastUpdatedAt         DateTime?
   createdAt             DateTime @default(now())

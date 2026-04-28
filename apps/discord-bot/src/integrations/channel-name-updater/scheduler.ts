@@ -4,15 +4,26 @@ import { PermissionFlagsBits } from "discord.js";
 import type { Client, GuildChannel } from "discord.js";
 import { log } from "evlog";
 
-import { getValueProvider } from "./providers";
 import {
   listEnabledChannelNameUpdaters,
   updateChannelNameUpdater,
 } from "./settings";
 import type { ChannelNameUpdater } from "./settings";
+import { getVariableFetcher } from "./variables";
 
 const MANAGE_CHANNELS_PERMISSION = PermissionFlagsBits.ManageChannels;
 const TICK_INTERVAL_SECONDS = 60;
+
+const extractPlaceholders = (template: string): string[] => {
+  const matches = template.matchAll(/\{([a-zA-Z0-9_]+)\}/g);
+  return [
+    ...new Set(
+      [...matches]
+        .map((match) => match[1])
+        .filter((value): value is string => typeof value === "string")
+    ),
+  ];
+};
 
 const resolveTargetChannel = async (
   client: Client<true>,
@@ -63,6 +74,9 @@ const buildChannelName = (
   return result;
 };
 
+const hasUnreplacedPlaceholders = (name: string): boolean =>
+  /\{[a-zA-Z0-9_]+\}/.test(name);
+
 const shouldRunUpdater = (updater: ChannelNameUpdater): boolean => {
   if (!updater.lastUpdatedAt) {
     return true;
@@ -72,6 +86,36 @@ const shouldRunUpdater = (updater: ChannelNameUpdater): boolean => {
   const intervalMs = updater.updateIntervalMinutes * 60_000;
 
   return elapsedMs >= intervalMs;
+};
+
+const fetchVariableValues = async ({
+  client,
+  guildId,
+  placeholders,
+}: {
+  client: Client<true>;
+  guildId: string;
+  placeholders: string[];
+}): Promise<Record<string, string | number> | null> => {
+  const values: Record<string, string | number> = {};
+  let hasValue = false;
+
+  for (const key of placeholders) {
+    const fetcher = getVariableFetcher(key);
+
+    if (!fetcher) {
+      continue;
+    }
+
+    const value = await fetcher.fetch(guildId, client);
+
+    if (value !== null) {
+      values[key] = value;
+      hasValue = true;
+    }
+  }
+
+  return hasValue ? values : null;
 };
 
 const processUpdater = async ({
@@ -85,27 +129,27 @@ const processUpdater = async ({
     return true;
   }
 
-  const provider = getValueProvider(updater.sourceType);
-  if (!provider) {
+  const placeholders = extractPlaceholders(updater.nameTemplate);
+
+  if (placeholders.length === 0) {
     log.warn({
-      message: "Unknown channel name updater source type",
-      sourceType: updater.sourceType,
-      updaterId: updater.id,
+      message: "Channel name updater template contains no placeholders",
+      updaterId: updater.channelId,
     });
 
     return false;
   }
 
-  const values = await provider.fetchValues(
-    updater.guildId,
-    updater.sourceConfig ?? undefined
-  );
+  const values = await fetchVariableValues({
+    client,
+    guildId: updater.guildId,
+    placeholders,
+  });
 
   if (values === null) {
     log.debug({
-      message: "Channel name updater source returned no values",
-      sourceType: updater.sourceType,
-      updaterId: updater.id,
+      message: "No variable values resolved for channel name updater",
+      updaterId: updater.channelId,
     });
 
     return false;
@@ -122,7 +166,7 @@ const processUpdater = async ({
       channelId: updater.channelId,
       guildId: updater.guildId,
       message: "Channel name updater target channel not found",
-      updaterId: updater.id,
+      updaterId: updater.channelId,
     });
 
     return false;
@@ -133,7 +177,7 @@ const processUpdater = async ({
       channelId: channel.id,
       guildId: updater.guildId,
       message: "Bot lacks Manage Channels permission for channel name updater",
-      updaterId: updater.id,
+      updaterId: updater.channelId,
     });
 
     return false;
@@ -141,9 +185,18 @@ const processUpdater = async ({
 
   const newName = buildChannelName(updater.nameTemplate, values);
 
+  if (hasUnreplacedPlaceholders(newName)) {
+    log.warn({
+      channelId: channel.id,
+      message: "Channel name contains unreplaced placeholders",
+      name: newName,
+      updaterId: updater.channelId,
+    });
+  }
+
   if (channel.name === newName) {
     await updateChannelNameUpdater({
-      id: updater.id,
+      channelId: updater.channelId,
       patch: { lastUpdatedAt: new Date() },
     });
 
@@ -154,7 +207,7 @@ const processUpdater = async ({
     await channel.setName(newName, "Mise à jour automatique du nom de salon");
 
     await updateChannelNameUpdater({
-      id: updater.id,
+      channelId: updater.channelId,
       patch: { lastUpdatedAt: new Date() },
     });
 
@@ -163,7 +216,7 @@ const processUpdater = async ({
       guildId: updater.guildId,
       message: "Updated channel name via updater",
       newName,
-      updaterId: updater.id,
+      updaterId: updater.channelId,
     });
 
     return true;
@@ -172,7 +225,7 @@ const processUpdater = async ({
       channelId: channel.id,
       err: error,
       message: "Failed to update channel name",
-      updaterId: updater.id,
+      updaterId: updater.channelId,
     });
 
     return false;

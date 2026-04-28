@@ -168,19 +168,22 @@ export const frTranslations = {
     "L'intervalle doit être compris entre {min} et {max} minutes.",
   "channelUpdater.errors.invalidChannelType":
     "Le salon sélectionné doit être un salon texte.",
+  "channelUpdater.errors.missingPlaceholder":
+    "Le modèle doit contenir au moins un placeholder valide.",
   "channelUpdater.errors.saveFailed": "Échec de l'enregistrement. Réessayez.",
   "channelUpdater.errors.serverOnly":
     "Cette commande peut uniquement être utilisée dans un serveur.",
   "channelUpdater.errors.templateLength":
     "Le modèle doit contenir entre 1 et 100 caractères.",
+  "channelUpdater.errors.unknownPlaceholders": "Placeholders inconnus : {keys}",
   "channelUpdater.errors.unknownSourceType": "Source de données inconnue.",
   "channelUpdater.errors.unsupportedSubcommand":
     "Sous-commande non prise en charge.",
   "channelUpdater.errors.updaterNotFound": "Renommeur introuvable.",
   "channelUpdater.errors.updaterNotInGuild":
     "Ce renommeur n'appartient pas à ce serveur.",
-  "channelUpdater.info.noSources": "Aucune source de données disponible.",
   "channelUpdater.info.noUpdaters": "Aucun renommeur configuré sur ce serveur.",
+  "channelUpdater.info.noVariables": "Aucune variable disponible.",
   "channelUpdater.info.sourcePlaceholders":
     "Placeholders disponibles : {placeholders}",
   "channelUpdater.show.channel": "Salon",
@@ -190,14 +193,14 @@ export const frTranslations = {
   "channelUpdater.show.source": "Source",
   "channelUpdater.show.template": "Modèle",
   "channelUpdater.success.channelSet": "Salon mis à jour : <#{channelId}>.",
-  "channelUpdater.success.created":
-    "Renommeur créé avec l'identifiant `{updaterId}`.",
-  "channelUpdater.success.deleted": "Renommeur `{updaterId}` supprimé.",
-  "channelUpdater.success.disabled": "Renommeur `{updaterId}` désactivé.",
-  "channelUpdater.success.enabled": "Renommeur `{updaterId}` activé.",
+  "channelUpdater.success.created": "Renommeur créé pour <#{channelId}>.",
+  "channelUpdater.success.deleted": "Renommeur supprimé pour <#{channelId}>.",
+  "channelUpdater.success.disabled": "Renommeur désactivé pour <#{channelId}>.",
+  "channelUpdater.success.enabled": "Renommeur activé pour <#{channelId}>.",
   "channelUpdater.success.intervalSet":
     "Intervalle mis à jour : {interval} minutes.",
   "channelUpdater.success.templateSet": "Modèle mis à jour : `{template}`.",
+  "channelUpdater.success.updated": "Renommeur mis à jour pour <#{channelId}>.",
   "commands.captcha.description":
     "Gérer les paramètres de vérification captcha",
   "commands.captcha.groupSet.description":
@@ -310,8 +313,8 @@ export const frTranslations = {
     "Changer le modèle de nom d'un renommeur",
   "commands.channelUpdater.sub.show.description":
     "Afficher les détails d'un renommeur",
-  "commands.channelUpdater.sub.sources.description":
-    "Lister les sources de données disponibles",
+  "commands.channelUpdater.sub.variables.description":
+    "Lister les variables disponibles",
   "commands.deleteCategoryChannels.description":
     "Suppression avancée de messages/salons/catégories avec ciblage",
   "commands.deleteCategoryChannels.option.category.description":

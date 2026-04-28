@@ -1,5 +1,9 @@
-export { listValueProviders } from "./providers";
-export type { ValueProvider } from "./providers";
+export {
+  getAllVariableKeys,
+  getVariableFetcher,
+  listVariableFetchers,
+} from "./variables";
+export type { VariableFetcher } from "./variables";
 export { startChannelNameUpdaterScheduler } from "./scheduler";
 export {
   createChannelNameUpdater,
