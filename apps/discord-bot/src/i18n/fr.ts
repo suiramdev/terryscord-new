@@ -289,16 +289,26 @@ export const frTranslations = {
     "embed.url (URL du titre, http/https)",
   "commands.embed.sub.send.description": "Publier l'embed dans le salon choisi",
   "commands.giveaway.description": "Gérer les giveaways",
+  "commands.giveaway.group.pingRole.description":
+    "Gérer les rôles mentionnés lors du lancement des giveaways",
   "commands.giveaway.option.description.description":
     "Description complémentaire",
   "commands.giveaway.option.duration.description": "Durée en secondes",
   "commands.giveaway.option.giveawayId.description":
     "Identifiant ou ID du message du giveaway",
+  "commands.giveaway.option.pingRole.description":
+    "Rôle à mentionner lors du lancement des giveaways",
   "commands.giveaway.option.prize.description": "Lot à gagner",
   "commands.giveaway.option.requiredRole.description":
     "Rôle requis pour participer",
   "commands.giveaway.option.winners.description": "Nombre de gagnants",
   "commands.giveaway.sub.end.description": "Terminer un giveaway en cours",
+  "commands.giveaway.sub.pingRoleAdd.description":
+    "Ajouter un rôle à la liste des mentions giveaway",
+  "commands.giveaway.sub.pingRoleRemove.description":
+    "Retirer un rôle de la liste des mentions giveaway",
+  "commands.giveaway.sub.pingRoleShow.description":
+    "Afficher les rôles mentionnés lors des giveaways",
   "commands.giveaway.sub.reroll.description":
     "Effectuer un nouveau tirage pour un giveaway terminé",
   "commands.giveaway.sub.start.description": "Démarrer un giveaway",
@@ -378,6 +388,10 @@ export const frTranslations = {
     "Vous ne possédez pas le rôle requis pour participer à ce giveaway.",
   "giveaway.errors.noParticipants":
     "Aucun participant n'a été enregistré pour ce giveaway.",
+  "giveaway.errors.pingRoleAlreadyAdded":
+    "Ce rôle est déjà dans la liste des mentions giveaway.",
+  "giveaway.errors.pingRoleNotFound":
+    "Ce rôle n'est pas dans la liste des mentions giveaway.",
   "giveaway.errors.prizeLength":
     "Le lot doit contenir entre {min} et {max} caractères.",
   "giveaway.errors.saveFailed":
@@ -390,16 +404,24 @@ export const frTranslations = {
     "Sous-commande giveaway non prise en charge.",
   "giveaway.errors.winnerCountRange":
     "Le nombre de gagnants doit être compris entre {min} et {max}.",
+
+  "giveaway.info.noPingRoles":
+    "Aucun rôle de mention giveaway n'est configuré.",
+  "giveaway.info.pingRolesList":
+    "Rôles mentionnés lors des giveaways : {roleMentions}",
   "giveaway.message.noWinners":
     "Le giveaway **{prize}** s'est terminé mais aucun participant n'a été enregistré.",
   "giveaway.message.rerollWinnersAnnounced":
-    "🎉 Nouveau tirage ! Félicitations {winnersMentions} ! Vous avez gagné **{prize}** !",
-
+    "🎉 Nouveau tirage ! Félicitations {winnersMentions} ! Vous avez gagné **{prize}** ! Un administrateur vous contactera sous peu pour vous remettre votre lot.",
   "giveaway.message.winnersAnnounced":
-    "🎉 Félicitations {winnersMentions} ! Vous avez gagné **{prize}** !",
+    "🎉 Félicitations {winnersMentions} ! Vous avez gagné **{prize}** ! Un administrateur vous contactera sous peu pour vous remettre votre lot.",
   "giveaway.success.ended":
     "Giveaway terminé. {winnerCount} gagnant(s) sélectionné(s).",
   "giveaway.success.entered": "Votre participation a été enregistrée.",
+  "giveaway.success.pingRoleAdded":
+    "Le rôle <@&{roleId}> a été ajouté aux mentions giveaway.",
+  "giveaway.success.pingRoleRemoved":
+    "Le rôle <@&{roleId}> a été retiré des mentions giveaway.",
   "giveaway.success.rerolled":
     "Nouveau tirage effectué. {winnerCount} gagnant(s) sélectionné(s).",
   "giveaway.success.started":

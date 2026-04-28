@@ -95,3 +95,12 @@ model GuildGiveawayParticipant {
   @@index([giveawayId], map: "guild_giveaway_participant_giveaway_idx")
   @@map("guild_giveaway_participant")
 }
+
+model GuildGiveawaySetting {
+  guildId     String   @id
+  pingRoleIds String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("guild_giveaway_setting")
+}

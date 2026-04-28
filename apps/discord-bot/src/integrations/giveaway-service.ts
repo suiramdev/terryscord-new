@@ -36,6 +36,7 @@ import {
 import type { GiveawayRecord } from "./giveaway-persistence";
 import { createGiveawayScheduler } from "./giveaway-scheduler";
 import type { GiveawayScheduler } from "./giveaway-scheduler";
+import { getGuildGiveawaySettings } from "./giveaway-settings";
 
 const ADMINISTRATOR_PERMISSION = PermissionFlagsBits.Administrator;
 
@@ -286,10 +287,17 @@ export const startGiveaway = async ({
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(enterButton);
 
+  const guildSettings = await getGuildGiveawaySettings(interaction.guildId);
+  const pingContent =
+    guildSettings.pingRoleIds.length > 0
+      ? guildSettings.pingRoleIds.map((id) => `<@&${id}>`).join(" ")
+      : undefined;
+
   let announcementMessage;
 
   try {
     announcementMessage = await channel.send({
+      ...(pingContent ? { content: pingContent } : {}),
       components: [row],
       embeds: [embed],
     });

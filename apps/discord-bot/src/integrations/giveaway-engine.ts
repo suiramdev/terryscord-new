@@ -184,5 +184,5 @@ export const createWinnerDmEmbed = ({
     .setColor(5_765_713)
     .setTitle("Félicitations !")
     .setDescription(
-      `Vous avez gagné **${prize}** sur le serveur **${guildName}**.`
+      `Vous avez gagné **${prize}** sur le serveur **${guildName}**. Un administrateur vous contactera sous peu pour vous remettre votre lot.`
     );
