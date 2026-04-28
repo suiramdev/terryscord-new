@@ -12,6 +12,7 @@ import {
 import type { SlashCommand } from "@/commands/types";
 import { replyWithEmbed } from "@/discord/embeds";
 import { t } from "@/i18n";
+import { handleGiveawayEnterInteraction } from "@/integrations/giveaway-service";
 
 const replyWithExecutionError = async (
   interaction: ChatInputCommandInteraction
@@ -136,6 +137,47 @@ const executeRolePickButtonSafely = async (
   }
 };
 
+const executeGiveawayButtonSafely = async (
+  interaction: ButtonInteraction
+): Promise<void> => {
+  const startedAt = Date.now();
+
+  log.debug({
+    channelId: interaction.channelId,
+    customId: interaction.customId,
+    guildId: interaction.guildId,
+    interactionId: interaction.id,
+    message: "Handling giveaway button interaction",
+    userId: interaction.user.id,
+  });
+
+  try {
+    await handleGiveawayEnterInteraction({ interaction });
+
+    log.info({
+      channelId: interaction.channelId,
+      customId: interaction.customId,
+      durationMs: Date.now() - startedAt,
+      guildId: interaction.guildId,
+      interactionId: interaction.id,
+      message: "Handled giveaway button interaction",
+      userId: interaction.user.id,
+    });
+  } catch (error: unknown) {
+    log.error({
+      customId: interaction.customId,
+      durationMs: Date.now() - startedAt,
+      err: error,
+      interactionId: interaction.id,
+      message: "Giveaway button interaction failed",
+      userId: interaction.user.id,
+    });
+  }
+};
+
+const isGiveawayEnterButton = (customId: string): boolean =>
+  customId.startsWith("giveaway:enter:");
+
 const handleRolePickButtonIfPresent = async (
   interaction: Interaction
 ): Promise<boolean> => {
@@ -148,6 +190,21 @@ const handleRolePickButtonIfPresent = async (
   }
 
   await executeRolePickButtonSafely(interaction);
+  return true;
+};
+
+const handleGiveawayButtonIfPresent = async (
+  interaction: Interaction
+): Promise<boolean> => {
+  if (!interaction.isButton()) {
+    return false;
+  }
+
+  if (!isGiveawayEnterButton(interaction.customId)) {
+    return false;
+  }
+
+  await executeGiveawayButtonSafely(interaction);
   return true;
 };
 
@@ -188,6 +245,10 @@ export const handleInteractionCreate = async (
   commandRegistry: ReadonlyMap<string, SlashCommand>
 ): Promise<void> => {
   if (await handleRolePickButtonIfPresent(interaction)) {
+    return;
+  }
+
+  if (await handleGiveawayButtonIfPresent(interaction)) {
     return;
   }
 

@@ -8,6 +8,7 @@ import { commands } from "./commands";
 import { createDiscordClient } from "./discord/client";
 import { registerEventHandlers } from "./discord/events";
 import { registerApplicationCommands } from "./discord/register-commands";
+import { initializeGiveawayService } from "./integrations/giveaway-service";
 import { startRssSubscriptionPolling } from "./integrations/rss-poller";
 import { runStartupChecks } from "./integrations/startup";
 import { evlogConfig } from "./logging";
@@ -15,6 +16,7 @@ import { evlogConfig } from "./logging";
 interface BotRuntimeState {
   bootId: number;
   client: Client | null;
+  stopGiveawayScheduler: (() => void) | null;
   stopRssPoller: (() => void) | null;
   unregisterShutdownHandlers: (() => void) | null;
 }
@@ -29,6 +31,7 @@ const getRuntimeState = (): BotRuntimeState => {
   globalThis.__terryscordDiscordBotRuntime ??= {
     bootId: 0,
     client: null,
+    stopGiveawayScheduler: null,
     stopRssPoller: null,
     unregisterShutdownHandlers: null,
   };
@@ -80,6 +83,9 @@ const runReadyTasks = async (client: Client<true>): Promise<void> => {
   const runtime = getRuntimeState();
   runtime.stopRssPoller?.();
   runtime.stopRssPoller = startRssSubscriptionPolling(client);
+
+  runtime.stopGiveawayScheduler?.();
+  runtime.stopGiveawayScheduler = await initializeGiveawayService(client);
 };
 
 const createShutdownHandler = (
@@ -101,6 +107,8 @@ const createShutdownHandler = (
     const runtime = getRuntimeState();
     runtime.unregisterShutdownHandlers?.();
     runtime.unregisterShutdownHandlers = null;
+    runtime.stopGiveawayScheduler?.();
+    runtime.stopGiveawayScheduler = null;
     runtime.stopRssPoller?.();
     runtime.stopRssPoller = null;
     runtime.client = null;
@@ -115,6 +123,8 @@ const destroyPreviousRuntime = (): void => {
 
   runtime.unregisterShutdownHandlers?.();
   runtime.unregisterShutdownHandlers = null;
+  runtime.stopGiveawayScheduler?.();
+  runtime.stopGiveawayScheduler = null;
   runtime.stopRssPoller?.();
   runtime.stopRssPoller = null;
 

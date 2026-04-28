@@ -288,6 +288,20 @@ export const frTranslations = {
   "commands.embed.option.url.description":
     "embed.url (URL du titre, http/https)",
   "commands.embed.sub.send.description": "Publier l'embed dans le salon choisi",
+  "commands.giveaway.description": "Gérer les giveaways",
+  "commands.giveaway.option.description.description":
+    "Description complémentaire",
+  "commands.giveaway.option.duration.description": "Durée en secondes",
+  "commands.giveaway.option.giveawayId.description":
+    "Identifiant ou ID du message du giveaway",
+  "commands.giveaway.option.prize.description": "Lot à gagner",
+  "commands.giveaway.option.requiredRole.description":
+    "Rôle requis pour participer",
+  "commands.giveaway.option.winners.description": "Nombre de gagnants",
+  "commands.giveaway.sub.end.description": "Terminer un giveaway en cours",
+  "commands.giveaway.sub.reroll.description":
+    "Effectuer un nouveau tirage pour un giveaway terminé",
+  "commands.giveaway.sub.start.description": "Démarrer un giveaway",
   "commands.hello.description":
     "Envoyer un message de salutation de Terryscord",
   "commands.hello.onlineMessage":
@@ -342,6 +356,54 @@ export const frTranslations = {
     "Sous-commande embed non prise en charge.",
   "embed.success.sent":
     "Embed envoyé dans <#{channelId}>. [Ouvrir le message]({messageUrl})",
+  "giveaway.errors.adminRequired":
+    "Vous devez être administrateur pour gérer les giveaways.",
+  "giveaway.errors.alreadyEntered": "Vous participez déjà à ce giveaway.",
+  "giveaway.errors.botSendMessagesRequired":
+    "Je dois pouvoir envoyer des messages dans ce salon.",
+  "giveaway.errors.descriptionLength":
+    "La description ne peut excéder {max} caractères.",
+  "giveaway.errors.durationRange":
+    "La durée doit être comprise entre {min} et {max} secondes.",
+  "giveaway.errors.enterFailed":
+    "Votre participation n'a pas pu être enregistrée. Réessayez.",
+  "giveaway.errors.giveawayAlreadyEnded": "Ce giveaway est déjà terminé.",
+  "giveaway.errors.giveawayNotEnded": "Ce giveaway n'est pas encore terminé.",
+  "giveaway.errors.giveawayNotFound": "Giveaway introuvable.",
+  "giveaway.errors.invalidButton":
+    "Ce bouton de giveaway est invalide ou périmé.",
+  "giveaway.errors.memberNotResolved":
+    "Impossible de charger votre profil membre.",
+  "giveaway.errors.missingRequiredRoles":
+    "Vous ne possédez pas le rôle requis pour participer à ce giveaway.",
+  "giveaway.errors.noParticipants":
+    "Aucun participant n'a été enregistré pour ce giveaway.",
+  "giveaway.errors.prizeLength":
+    "Le lot doit contenir entre {min} et {max} caractères.",
+  "giveaway.errors.saveFailed":
+    "Échec de l'enregistrement du giveaway. Réessayez.",
+  "giveaway.errors.sendFailed":
+    "Impossible d'envoyer le message de giveaway. Vérifiez mes permissions.",
+  "giveaway.errors.serverOnly":
+    "Cette commande peut uniquement être utilisée dans un serveur.",
+  "giveaway.errors.unsupportedSubcommand":
+    "Sous-commande giveaway non prise en charge.",
+  "giveaway.errors.winnerCountRange":
+    "Le nombre de gagnants doit être compris entre {min} et {max}.",
+  "giveaway.message.noWinners":
+    "Le giveaway **{prize}** s'est terminé mais aucun participant n'a été enregistré.",
+  "giveaway.message.rerollWinnersAnnounced":
+    "🎉 Nouveau tirage ! Félicitations {winnersMentions} ! Vous avez gagné **{prize}** !",
+
+  "giveaway.message.winnersAnnounced":
+    "🎉 Félicitations {winnersMentions} ! Vous avez gagné **{prize}** !",
+  "giveaway.success.ended":
+    "Giveaway terminé. {winnerCount} gagnant(s) sélectionné(s).",
+  "giveaway.success.entered": "Votre participation a été enregistrée.",
+  "giveaway.success.rerolled":
+    "Nouveau tirage effectué. {winnerCount} gagnant(s) sélectionné(s).",
+  "giveaway.success.started":
+    "Giveaway démarré. [Voir le message]({messageUrl})",
   "interaction.commandUnavailable":
     "Cette commande n'est pas disponible pour le moment.",
   "interaction.executionError":
@@ -388,6 +450,7 @@ export const frTranslations = {
     "Vous avez déjà le rôle <@&{roleId}>.",
   "rolePickButton.interaction.assignFailed":
     "Je n'ai pas pu attribuer ce rôle. Vérifiez mes permissions et la hiérarchie des rôles.",
+
   "rolePickButton.interaction.assigned": "Rôle attribué: <@&{roleId}>",
   "rolePickButton.interaction.invalidButton":
     "Ce bouton Role Pick Button est invalide ou périmé.",
@@ -402,7 +465,6 @@ export const frTranslations = {
     "Role Pick Button supprimé (éléments retirés: **{count}**).",
   "rolePickButton.success.restored":
     "Message restauré: tous les Role Pick Buttons ont été retirés (total: **{count}**).",
-
   "verification.audit.cleanupOrphaned":
     "Nettoyage d'un salon captcha orphelin de vérification",
   "verification.audit.createReason":
