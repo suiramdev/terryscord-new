@@ -34,6 +34,7 @@
     "db:studio": "turbo -F @terryscord/db db:studio",
     "db:generate": "turbo -F @terryscord/db db:generate",
     "db:migrate": "turbo -F @terryscord/db db:migrate",
+    "db:deploy": "turbo run db:deploy --filter=@terryscord/db",
     "db:start": "turbo -F @terryscord/db db:start",
     "db:watch": "turbo -F @terryscord/db db:watch",
     "db:stop": "turbo -F @terryscord/db db:stop",

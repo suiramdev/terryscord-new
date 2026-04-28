@@ -40,10 +40,16 @@ ENV NODE_ENV=production
 
 COPY --from=production-deps /app/node_modules ./node_modules
 COPY --from=production-deps /app/apps/server/node_modules ./apps/server/node_modules
+COPY --from=production-deps /app/packages/db/node_modules ./packages/db/node_modules
 COPY --from=builder /app/apps/server/package.json ./apps/server/package.json
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
+COPY --from=builder /app/packages/db/package.json ./packages/db/package.json
+COPY --from=builder /app/packages/db/prisma.config.ts ./packages/db/prisma.config.ts
+COPY --from=builder /app/packages/db/prisma ./packages/db/prisma
+COPY docker/run-with-migrations.sh ./docker/run-with-migrations.sh
 
 USER bun
 EXPOSE 3000
 WORKDIR /app/apps/server
+ENTRYPOINT ["sh", "/app/docker/run-with-migrations.sh"]
 CMD ["bun", "dist/index.mjs"]
