@@ -38,15 +38,15 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY --from=production-deps /app/node_modules ./node_modules
-COPY --from=production-deps /app/apps/server/node_modules ./apps/server/node_modules
-COPY --from=production-deps /app/packages/db/node_modules ./packages/db/node_modules
-COPY --from=builder /app/apps/server/package.json ./apps/server/package.json
-COPY --from=builder /app/apps/server/dist ./apps/server/dist
-COPY --from=builder /app/packages/db/package.json ./packages/db/package.json
-COPY --from=builder /app/packages/db/prisma.config.ts ./packages/db/prisma.config.ts
-COPY --from=builder /app/packages/db/prisma ./packages/db/prisma
-COPY docker/run-with-migrations.sh ./docker/run-with-migrations.sh
+COPY --chown=bun:bun --from=production-deps /app/node_modules ./node_modules
+COPY --chown=bun:bun --from=production-deps /app/apps/server/node_modules ./apps/server/node_modules
+COPY --chown=bun:bun --from=production-deps /app/packages/db/node_modules ./packages/db/node_modules
+COPY --chown=bun:bun --from=builder /app/apps/server/package.json ./apps/server/package.json
+COPY --chown=bun:bun --from=builder /app/apps/server/dist ./apps/server/dist
+COPY --chown=bun:bun --from=builder /app/packages/db/package.json ./packages/db/package.json
+COPY --chown=bun:bun --from=builder /app/packages/db/prisma.config.ts ./packages/db/prisma.config.ts
+COPY --chown=bun:bun --from=builder /app/packages/db/prisma ./packages/db/prisma
+COPY --chown=bun:bun docker/run-with-migrations.sh ./docker/run-with-migrations.sh
 
 USER bun
 EXPOSE 3000
