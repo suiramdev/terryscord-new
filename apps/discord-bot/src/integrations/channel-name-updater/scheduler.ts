@@ -122,17 +122,13 @@ const fetchVariableValues = async ({
   return hasValue ? values : null;
 };
 
-const processUpdater = async ({
+export const applyChannelNameUpdate = async ({
   client,
   updater,
 }: {
   client: Client<true>;
   updater: ChannelNameUpdater;
 }): Promise<boolean> => {
-  if (!shouldRunUpdater(updater)) {
-    return true;
-  }
-
   const placeholders = extractPlaceholders(updater.nameTemplate);
 
   if (placeholders.length === 0) {
@@ -234,6 +230,20 @@ const processUpdater = async ({
 
     return false;
   }
+};
+
+const processUpdater = ({
+  client,
+  updater,
+}: {
+  client: Client<true>;
+  updater: ChannelNameUpdater;
+}): Promise<boolean> => {
+  if (!shouldRunUpdater(updater)) {
+    return Promise.resolve(true);
+  }
+
+  return applyChannelNameUpdate({ client, updater });
 };
 
 const runTick = async (client: Client<true>): Promise<void> => {

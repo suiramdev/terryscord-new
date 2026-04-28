@@ -5,11 +5,16 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
-import type { ChatInputCommandInteraction, GuildChannel } from "discord.js";
+import type {
+  ChatInputCommandInteraction,
+  Client,
+  GuildChannel,
+} from "discord.js";
 
 import { replyWithEmbed } from "@/discord/embeds";
 import { t } from "@/i18n";
 import {
+  applyChannelNameUpdate,
   deleteChannelNameUpdater,
   getAllVariableKeys,
   getChannelNameUpdater,
@@ -33,6 +38,21 @@ const VARIABLES_SUBCOMMAND = "variables";
 
 const MIN_INTERVAL_MINUTES = 10;
 const MAX_INTERVAL_MINUTES = 1440;
+
+const runUpdaterInBackground = async (
+  client: Client<true>,
+  updater: Awaited<ReturnType<typeof updateChannelNameUpdater>>
+): Promise<void> => {
+  if (!updater) {
+    return;
+  }
+
+  try {
+    await applyChannelNameUpdate({ client, updater });
+  } catch {
+    // errors are already logged by applyChannelNameUpdate
+  }
+};
 
 const extractPlaceholders = (template: string): string[] => {
   const matches = template.matchAll(/\{([a-zA-Z0-9_]+)\}/g);
@@ -208,8 +228,10 @@ const handleCreate = async (
   const existing = await getChannelNameUpdater(channel.id);
 
   try {
+    let updater: Awaited<ReturnType<typeof updateChannelNameUpdater>> = null;
+
     if (existing) {
-      await updateChannelNameUpdater({
+      updater = await updateChannelNameUpdater({
         channelId: channel.id,
         patch: {
           enabled: true,
@@ -227,29 +249,31 @@ const handleCreate = async (
         ),
         tone: "success",
       });
+    } else {
+      updater = await updateChannelNameUpdater({
+        channelId: channel.id,
+        patch: {
+          enabled: true,
+          lastUpdatedAt: null,
+          nameTemplate: template,
+          updateIntervalMinutes: intervalMinutes,
+        },
+      });
 
-      return;
+      await replyWithEmbed({
+        interaction,
+        message: t(
+          "channelUpdater.success.created",
+          { channelId: channel.id },
+          locale
+        ),
+        tone: "success",
+      });
     }
 
-    await updateChannelNameUpdater({
-      channelId: channel.id,
-      patch: {
-        enabled: true,
-        lastUpdatedAt: null,
-        nameTemplate: template,
-        updateIntervalMinutes: intervalMinutes,
-      },
-    });
-
-    await replyWithEmbed({
-      interaction,
-      message: t(
-        "channelUpdater.success.created",
-        { channelId: channel.id },
-        locale
-      ),
-      tone: "success",
-    });
+    if (updater) {
+      runUpdaterInBackground(interaction.client, updater);
+    }
   } catch {
     await replyWithEmbed({
       interaction,
@@ -406,6 +430,10 @@ const handleSetEnabled = async (
     });
 
     return;
+  }
+
+  if (enabled) {
+    runUpdaterInBackground(interaction.client, updated);
   }
 
   await replyWithEmbed({
@@ -567,6 +595,8 @@ const handleSetTemplate = async (
 
     return;
   }
+
+  runUpdaterInBackground(interaction.client, updated);
 
   await replyWithEmbed({
     interaction,
