@@ -157,12 +157,12 @@
         "@terryscord/env": "workspace:*",
         "dotenv": "catalog:",
         "pg": "^8.17.1",
+        "prisma": "^7.2.0",
         "zod": "catalog:",
       },
       "devDependencies": {
         "@terryscord/config": "workspace:*",
         "@types/pg": "^8.16.0",
-        "prisma": "^7.2.0",
         "typescript": "catalog:",
       },
     },

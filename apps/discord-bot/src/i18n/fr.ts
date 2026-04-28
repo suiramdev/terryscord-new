@@ -157,6 +157,50 @@ export const frTranslations = {
 
   "captcha.success.workflowAlreadyActive":
     "Impossible de démarrér la vérification captcha : une session est déjà active pour ce membre.",
+  "channelUpdater.errors.adminRequired":
+    "Vous devez être administrateur pour gérer les renommeurs de salon.",
+  "channelUpdater.errors.botManageChannelsRequired":
+    "Je dois avoir la permission `Gérer les salons` sur ce salon pour le renommer.",
+  "channelUpdater.errors.botMemberUnavailable":
+    "Impossible de charger mes informations de membre bot dans ce serveur.",
+  "channelUpdater.errors.deleteFailed": "Échec de la suppression du renommeur.",
+  "channelUpdater.errors.intervalRange":
+    "L'intervalle doit être compris entre {min} et {max} minutes.",
+  "channelUpdater.errors.invalidChannelType":
+    "Le salon sélectionné doit être un salon texte.",
+  "channelUpdater.errors.missingPlaceholder":
+    "Le modèle doit contenir au moins un placeholder valide.",
+  "channelUpdater.errors.saveFailed": "Échec de l'enregistrement. Réessayez.",
+  "channelUpdater.errors.serverOnly":
+    "Cette commande peut uniquement être utilisée dans un serveur.",
+  "channelUpdater.errors.templateLength":
+    "Le modèle doit contenir entre 1 et 100 caractères.",
+  "channelUpdater.errors.unknownPlaceholders": "Placeholders inconnus : {keys}",
+  "channelUpdater.errors.unknownSourceType": "Source de données inconnue.",
+  "channelUpdater.errors.unsupportedSubcommand":
+    "Sous-commande non prise en charge.",
+  "channelUpdater.errors.updaterNotFound": "Renommeur introuvable.",
+  "channelUpdater.errors.updaterNotInGuild":
+    "Ce renommeur n'appartient pas à ce serveur.",
+  "channelUpdater.info.noUpdaters": "Aucun renommeur configuré sur ce serveur.",
+  "channelUpdater.info.noVariables": "Aucune variable disponible.",
+  "channelUpdater.info.sourcePlaceholders":
+    "Placeholders disponibles : {placeholders}",
+  "channelUpdater.show.channel": "Salon",
+  "channelUpdater.show.enabled": "Activé",
+  "channelUpdater.show.interval": "Intervalle",
+  "channelUpdater.show.lastUpdated": "Dernière mise à jour",
+  "channelUpdater.show.source": "Source",
+  "channelUpdater.show.template": "Modèle",
+  "channelUpdater.success.channelSet": "Salon mis à jour : <#{channelId}>.",
+  "channelUpdater.success.created": "Renommeur créé pour <#{channelId}>.",
+  "channelUpdater.success.deleted": "Renommeur supprimé pour <#{channelId}>.",
+  "channelUpdater.success.disabled": "Renommeur désactivé pour <#{channelId}>.",
+  "channelUpdater.success.enabled": "Renommeur activé pour <#{channelId}>.",
+  "channelUpdater.success.intervalSet":
+    "Intervalle mis à jour : {interval} minutes.",
+  "channelUpdater.success.templateSet": "Modèle mis à jour : `{template}`.",
+  "channelUpdater.success.updated": "Renommeur mis à jour pour <#{channelId}>.",
   "commands.captcha.description":
     "Gérer les paramètres de vérification captcha",
   "commands.captcha.groupSet.description":
@@ -186,6 +230,7 @@ export const frTranslations = {
     "Niveau de bruit de 0 (aucun) à 100 (eleve)",
   "commands.captcha.option.resetSetting.description":
     "Paramètre à réinitialiser",
+
   "commands.captcha.option.role.description": "Rôle à attribuer",
   "commands.captcha.option.timeoutValue.description": "Délai en secondes",
   "commands.captcha.option.type.description": "Type de captcha",
@@ -202,6 +247,7 @@ export const frTranslations = {
   "commands.captcha.resetChoice.maxAttempts": "Seuil d'alerte essais",
   "commands.captcha.resetChoice.noiseLevel": "Niveau de bruit",
   "commands.captcha.resetChoice.timeoutSeconds": "Délai (secondes)",
+
   "commands.captcha.resetChoice.verifiedRole": "Rôle vérifié",
   "commands.captcha.sub.allowAdminAccess.description":
     "Activer ou désactiver la visibilite admin des salons captcha",
@@ -227,7 +273,6 @@ export const frTranslations = {
     "Activer ou désactiver l'expulsion des utilisateurs qui échouent",
   "commands.captcha.sub.maxAttempts.description":
     "Définir le seuil d'essais ratés avant alerte admin",
-
   "commands.captcha.sub.noiseLevel.description":
     "Définir le niveau de bruit captcha pour les leurres et traces",
   "commands.captcha.sub.recreateUnverified.description":
@@ -240,6 +285,36 @@ export const frTranslations = {
     "Définir le délai captcha en secondes",
   "commands.captcha.sub.verifiedRole.description":
     "Définir le rôle attribué après un captcha réussi",
+  "commands.channelUpdater.description":
+    "Gérer les renommeurs de salon automatiques",
+  "commands.channelUpdater.groupSet.description":
+    "Modifier un renommeur existant",
+  "commands.channelUpdater.option.channel.description": "Salon texte cible",
+  "commands.channelUpdater.option.enabled.description":
+    "Activer ou désactiver le renommeur",
+  "commands.channelUpdater.option.id.description": "Identifiant du renommeur",
+  "commands.channelUpdater.option.interval.description":
+    "Intervalle en minutes (minimum 10)",
+  "commands.channelUpdater.option.source.description": "Source de données",
+  "commands.channelUpdater.option.template.description":
+    "Modèle de nom avec placeholders ({count}, etc.)",
+  "commands.channelUpdater.sub.create.description":
+    "Créer un renommeur de salon",
+  "commands.channelUpdater.sub.delete.description": "Supprimer un renommeur",
+  "commands.channelUpdater.sub.list.description":
+    "Lister les renommeurs de ce serveur",
+  "commands.channelUpdater.sub.setChannel.description":
+    "Changer le salon d'un renommeur",
+  "commands.channelUpdater.sub.setEnabled.description":
+    "Activer ou désactiver un renommeur",
+  "commands.channelUpdater.sub.setInterval.description":
+    "Changer l'intervalle d'un renommeur",
+  "commands.channelUpdater.sub.setTemplate.description":
+    "Changer le modèle de nom d'un renommeur",
+  "commands.channelUpdater.sub.show.description":
+    "Afficher les détails d'un renommeur",
+  "commands.channelUpdater.sub.variables.description":
+    "Lister les variables disponibles",
   "commands.deleteCategoryChannels.description":
     "Suppression avancée de messages/salons/catégories avec ciblage",
   "commands.deleteCategoryChannels.option.category.description":
@@ -260,7 +335,6 @@ export const frTranslations = {
     "Créer et envoyer un embed avec des options structurées",
   "commands.embed.option.authorIconUrl.description":
     "embed.author.iconURL (URL http/https)",
-
   "commands.embed.option.authorName.description":
     "embed.author.name (requis pour utiliser author.url/iconURL)",
   "commands.embed.option.authorUrl.description":
@@ -288,6 +362,30 @@ export const frTranslations = {
   "commands.embed.option.url.description":
     "embed.url (URL du titre, http/https)",
   "commands.embed.sub.send.description": "Publier l'embed dans le salon choisi",
+  "commands.giveaway.description": "Gérer les giveaways",
+  "commands.giveaway.group.pingRole.description":
+    "Gérer les rôles mentionnés lors du lancement des giveaways",
+  "commands.giveaway.option.description.description":
+    "Description complémentaire",
+  "commands.giveaway.option.duration.description": "Durée en secondes",
+  "commands.giveaway.option.giveawayId.description":
+    "Identifiant ou ID du message du giveaway",
+  "commands.giveaway.option.pingRole.description":
+    "Rôle à mentionner lors du lancement des giveaways",
+  "commands.giveaway.option.prize.description": "Lot à gagner",
+  "commands.giveaway.option.requiredRole.description":
+    "Rôle requis pour participer",
+  "commands.giveaway.option.winners.description": "Nombre de gagnants",
+  "commands.giveaway.sub.end.description": "Terminer un giveaway en cours",
+  "commands.giveaway.sub.pingRoleAdd.description":
+    "Ajouter un rôle à la liste des mentions giveaway",
+  "commands.giveaway.sub.pingRoleRemove.description":
+    "Retirer un rôle de la liste des mentions giveaway",
+  "commands.giveaway.sub.pingRoleShow.description":
+    "Afficher les rôles mentionnés lors des giveaways",
+  "commands.giveaway.sub.reroll.description":
+    "Effectuer un nouveau tirage pour un giveaway terminé",
+  "commands.giveaway.sub.start.description": "Démarrer un giveaway",
   "commands.hello.description":
     "Envoyer un message de salutation de Terryscord",
   "commands.hello.onlineMessage":
@@ -296,6 +394,7 @@ export const frTranslations = {
   "commands.rolePickButton.choice.style.primary": "Principal",
   "commands.rolePickButton.choice.style.secondary": "Secondaire",
   "commands.rolePickButton.choice.style.success": "Succès",
+
   "commands.rolePickButton.description":
     "Ajouter des boutons de sélection de rôle sur un message existant",
   "commands.rolePickButton.option.channel.description":
@@ -315,6 +414,23 @@ export const frTranslations = {
     "Supprimer un Role Pick Button spécifique par rôle",
   "commands.rolePickButton.sub.restore.description":
     "Retirer tous les Role Pick Buttons d'un message",
+  "commands.sbox.description": "Configurer le compteur de joueurs s&box",
+  "commands.sbox.groupSet.description": "Définir les options du compteur s&box",
+  "commands.sbox.option.channel.description":
+    "Salon à renommer avec le nombre de joueurs",
+  "commands.sbox.option.enabled.description":
+    "Activer ou désactiver le compteur",
+  "commands.sbox.option.template.description":
+    "Modèle de nom de salon (inclure {count})",
+  "commands.sbox.sub.reset.description": "Réinitialiser la configuration s&box",
+  "commands.sbox.sub.setChannel.description":
+    "Définir le salon du compteur s&box",
+  "commands.sbox.sub.setEnabled.description":
+    "Activer ou désactiver le compteur s&box",
+  "commands.sbox.sub.setNameFormat.description":
+    "Définir le modèle de nom de salon",
+  "commands.sbox.sub.show.description":
+    "Afficher la configuration s&box actuelle",
   "common.disabled": "désactivé",
   "common.enabled": "activé",
   "common.notConfigured": "non configuré",
@@ -340,8 +456,68 @@ export const frTranslations = {
     "Cette commande peut uniquement être utilisée dans un serveur.",
   "embed.errors.unsupportedSubcommand":
     "Sous-commande embed non prise en charge.",
+
   "embed.success.sent":
     "Embed envoyé dans <#{channelId}>. [Ouvrir le message]({messageUrl})",
+  "giveaway.errors.adminRequired":
+    "Vous devez être administrateur pour gérer les giveaways.",
+  "giveaway.errors.alreadyEntered": "Vous participez déjà à ce giveaway.",
+  "giveaway.errors.botSendMessagesRequired":
+    "Je dois pouvoir envoyer des messages dans ce salon.",
+  "giveaway.errors.descriptionLength":
+    "La description ne peut excéder {max} caractères.",
+  "giveaway.errors.durationRange":
+    "La durée doit être comprise entre {min} et {max} secondes.",
+  "giveaway.errors.enterFailed":
+    "Votre participation n'a pas pu être enregistrée. Réessayez.",
+  "giveaway.errors.giveawayAlreadyEnded": "Ce giveaway est déjà terminé.",
+  "giveaway.errors.giveawayNotEnded": "Ce giveaway n'est pas encore terminé.",
+  "giveaway.errors.giveawayNotFound": "Giveaway introuvable.",
+  "giveaway.errors.invalidButton":
+    "Ce bouton de giveaway est invalide ou périmé.",
+  "giveaway.errors.memberNotResolved":
+    "Impossible de charger votre profil membre.",
+  "giveaway.errors.missingRequiredRoles":
+    "Vous ne possédez pas le rôle requis pour participer à ce giveaway.",
+  "giveaway.errors.noParticipants":
+    "Aucun participant n'a été enregistré pour ce giveaway.",
+  "giveaway.errors.pingRoleAlreadyAdded":
+    "Ce rôle est déjà dans la liste des mentions giveaway.",
+  "giveaway.errors.pingRoleNotFound":
+    "Ce rôle n'est pas dans la liste des mentions giveaway.",
+  "giveaway.errors.prizeLength":
+    "Le lot doit contenir entre {min} et {max} caractères.",
+  "giveaway.errors.saveFailed":
+    "Échec de l'enregistrement du giveaway. Réessayez.",
+  "giveaway.errors.sendFailed":
+    "Impossible d'envoyer le message de giveaway. Vérifiez mes permissions.",
+  "giveaway.errors.serverOnly":
+    "Cette commande peut uniquement être utilisée dans un serveur.",
+  "giveaway.errors.unsupportedSubcommand":
+    "Sous-commande giveaway non prise en charge.",
+  "giveaway.errors.winnerCountRange":
+    "Le nombre de gagnants doit être compris entre {min} et {max}.",
+  "giveaway.info.noPingRoles":
+    "Aucun rôle de mention giveaway n'est configuré.",
+  "giveaway.info.pingRolesList":
+    "Rôles mentionnés lors des giveaways : {roleMentions}",
+  "giveaway.message.noWinners":
+    "Le giveaway **{prize}** s'est terminé mais aucun participant n'a été enregistré.",
+  "giveaway.message.rerollWinnersAnnounced":
+    "🎉 Nouveau tirage ! Félicitations {winnersMentions} ! Vous avez gagné **{prize}** ! Un administrateur vous contactera sous peu pour vous remettre votre lot.",
+  "giveaway.message.winnersAnnounced":
+    "🎉 Félicitations {winnersMentions} ! Vous avez gagné **{prize}** ! Un administrateur vous contactera sous peu pour vous remettre votre lot.",
+  "giveaway.success.ended":
+    "Giveaway terminé. {winnerCount} gagnant(s) sélectionné(s).",
+  "giveaway.success.entered": "Votre participation a été enregistrée.",
+  "giveaway.success.pingRoleAdded":
+    "Le rôle <@&{roleId}> a été ajouté aux mentions giveaway.",
+  "giveaway.success.pingRoleRemoved":
+    "Le rôle <@&{roleId}> a été retiré des mentions giveaway.",
+  "giveaway.success.rerolled":
+    "Nouveau tirage effectué. {winnerCount} gagnant(s) sélectionné(s).",
+  "giveaway.success.started":
+    "Giveaway démarré. [Voir le message]({messageUrl})",
   "interaction.commandUnavailable":
     "Cette commande n'est pas disponible pour le moment.",
   "interaction.executionError":
@@ -402,7 +578,6 @@ export const frTranslations = {
     "Role Pick Button supprimé (éléments retirés: **{count}**).",
   "rolePickButton.success.restored":
     "Message restauré: tous les Role Pick Buttons ont été retirés (total: **{count}**).",
-
   "verification.audit.cleanupOrphaned":
     "Nettoyage d'un salon captcha orphelin de vérification",
   "verification.audit.createReason":

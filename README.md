@@ -99,6 +99,7 @@ terryscord/
 - `bun run db:push`: Push schema changes to database
 - `bun run db:generate`: Generate database client/types
 - `bun run db:migrate`: Run database migrations
+- `bun run db:deploy`: Apply pending migrations in production
 - `bun run db:studio`: Open database studio UI
 - `bun run check`: Run Oxlint and Oxfmt
 
@@ -129,6 +130,7 @@ If you deploy with Dokploy, set:
 
 - Build context: repository root (`.`)
 - Dockerfile path: `apps/<app-name>/Dockerfile` (for example `apps/discord-bot/Dockerfile`)
+- Runtime environment variables in Dokploy, especially `DATABASE_URL` for the server and `DATABASE_URL` or `BOT_DATABASE_URL` for the Discord bot.
 
 ```bash
 docker build -f apps/server/Dockerfile -t terryscord-server .
@@ -145,6 +147,8 @@ docker run --rm -p 3000:3000 --env-file apps/server/.env terryscord-server
 ```
 
 If `DATABASE_URL` points to `localhost`, update it for container networking (for example, `host.docker.internal` on macOS/Windows, or a Compose service name).
+
+The server and Discord bot images apply pending Prisma migrations on startup with `prisma migrate deploy`. This uses the runtime environment injected by Docker or Dokploy, not Docker build arguments. Set `RUN_DATABASE_MIGRATIONS=false` on secondary services if you want only one deployed container to own migration execution.
 
 Web:
 
