@@ -8,6 +8,7 @@ import { commands } from "./commands";
 import { createDiscordClient } from "./discord/client";
 import { registerEventHandlers } from "./discord/events";
 import { registerApplicationCommands } from "./discord/register-commands";
+import { startChannelNameUpdaterScheduler } from "./integrations/channel-name-updater";
 import { initializeGiveawayService } from "./integrations/giveaway-service";
 import { startRssSubscriptionPolling } from "./integrations/rss-poller";
 import { runStartupChecks } from "./integrations/startup";
@@ -18,6 +19,7 @@ interface BotRuntimeState {
   client: Client | null;
   stopGiveawayScheduler: (() => void) | null;
   stopRssPoller: (() => void) | null;
+  stopSboxPoller: (() => void) | null;
   unregisterShutdownHandlers: (() => void) | null;
 }
 
@@ -33,6 +35,7 @@ const getRuntimeState = (): BotRuntimeState => {
     client: null,
     stopGiveawayScheduler: null,
     stopRssPoller: null,
+    stopSboxPoller: null,
     unregisterShutdownHandlers: null,
   };
 
@@ -84,6 +87,9 @@ const runReadyTasks = async (client: Client<true>): Promise<void> => {
   runtime.stopRssPoller?.();
   runtime.stopRssPoller = startRssSubscriptionPolling(client);
 
+  runtime.stopSboxPoller?.();
+  runtime.stopSboxPoller = startChannelNameUpdaterScheduler(client);
+
   runtime.stopGiveawayScheduler?.();
   runtime.stopGiveawayScheduler = await initializeGiveawayService(client);
 };
@@ -111,6 +117,8 @@ const createShutdownHandler = (
     runtime.stopGiveawayScheduler = null;
     runtime.stopRssPoller?.();
     runtime.stopRssPoller = null;
+    runtime.stopSboxPoller?.();
+    runtime.stopSboxPoller = null;
     runtime.client = null;
 
     client.destroy();
@@ -127,6 +135,8 @@ const destroyPreviousRuntime = (): void => {
   runtime.stopGiveawayScheduler = null;
   runtime.stopRssPoller?.();
   runtime.stopRssPoller = null;
+  runtime.stopSboxPoller?.();
+  runtime.stopSboxPoller = null;
 
   if (runtime.client) {
     log.info({

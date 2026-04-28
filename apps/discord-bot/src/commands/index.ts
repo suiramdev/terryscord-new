@@ -1,4 +1,5 @@
 import { captchaCommand } from "./captcha";
+import { channelUpdaterCommand } from "./channel-updater";
 import { deleteCategoryChannelsCommand } from "./delete-category-channels";
 import { embedCommand } from "./embed";
 import { giveawayCommand } from "./giveaway";
@@ -9,6 +10,7 @@ import type { SlashCommand } from "./types";
 
 export const commands: readonly SlashCommand[] = [
   captchaCommand,
+  channelUpdaterCommand,
   deleteCategoryChannelsCommand,
   embedCommand,
   giveawayCommand,
