@@ -4,7 +4,10 @@ export {
   listVariableFetchers,
 } from "./variables";
 export type { VariableFetcher } from "./variables";
-export { startChannelNameUpdaterScheduler } from "./scheduler";
+export {
+  applyChannelNameUpdate,
+  startChannelNameUpdaterScheduler,
+} from "./scheduler";
 export {
   createChannelNameUpdater,
   deleteChannelNameUpdater,

@@ -5,11 +5,17 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
-import type { ChatInputCommandInteraction, GuildChannel } from "discord.js";
+import type {
+  ChatInputCommandInteraction,
+  Client,
+  GuildChannel,
+} from "discord.js";
 
 import { replyWithEmbed } from "@/discord/embeds";
 import { t } from "@/i18n";
 import {
+  applyChannelNameUpdate,
+  createChannelNameUpdater,
   deleteChannelNameUpdater,
   getAllVariableKeys,
   getChannelNameUpdater,
@@ -33,6 +39,21 @@ const VARIABLES_SUBCOMMAND = "variables";
 
 const MIN_INTERVAL_MINUTES = 10;
 const MAX_INTERVAL_MINUTES = 1440;
+
+const runUpdaterInBackground = async (
+  client: Client<true>,
+  updater: Awaited<ReturnType<typeof updateChannelNameUpdater>>
+): Promise<void> => {
+  if (!updater) {
+    return;
+  }
+
+  try {
+    await applyChannelNameUpdate({ client, updater });
+  } catch {
+    // errors are already logged by applyChannelNameUpdate
+  }
+};
 
 const extractPlaceholders = (template: string): string[] => {
   const matches = template.matchAll(/\{([a-zA-Z0-9_]+)\}/g);
@@ -140,7 +161,10 @@ const handleCreate = async (
   const intervalMinutes =
     interaction.options.getInteger("interval") ?? MIN_INTERVAL_MINUTES;
 
-  if (channel.type !== ChannelType.GuildText) {
+  if (
+    channel.type !== ChannelType.GuildText &&
+    channel.type !== ChannelType.GuildVoice
+  ) {
     await replyWithEmbed({
       interaction,
       message: t("channelUpdater.errors.invalidChannelType"),
@@ -205,8 +229,10 @@ const handleCreate = async (
   const existing = await getChannelNameUpdater(channel.id);
 
   try {
+    let updater: Awaited<ReturnType<typeof updateChannelNameUpdater>> = null;
+
     if (existing) {
-      await updateChannelNameUpdater({
+      updater = await updateChannelNameUpdater({
         channelId: channel.id,
         patch: {
           enabled: true,
@@ -224,29 +250,29 @@ const handleCreate = async (
         ),
         tone: "success",
       });
-
-      return;
-    }
-
-    await updateChannelNameUpdater({
-      channelId: channel.id,
-      patch: {
+    } else {
+      updater = await createChannelNameUpdater({
+        channelId: channel.id,
         enabled: true,
-        lastUpdatedAt: null,
+        guildId,
         nameTemplate: template,
         updateIntervalMinutes: intervalMinutes,
-      },
-    });
+      });
 
-    await replyWithEmbed({
-      interaction,
-      message: t(
-        "channelUpdater.success.created",
-        { channelId: channel.id },
-        locale
-      ),
-      tone: "success",
-    });
+      await replyWithEmbed({
+        interaction,
+        message: t(
+          "channelUpdater.success.created",
+          { channelId: channel.id },
+          locale
+        ),
+        tone: "success",
+      });
+    }
+
+    if (updater) {
+      runUpdaterInBackground(interaction.client, updater);
+    }
   } catch {
     await replyWithEmbed({
       interaction,
@@ -403,6 +429,10 @@ const handleSetEnabled = async (
     });
 
     return;
+  }
+
+  if (enabled) {
+    runUpdaterInBackground(interaction.client, updated);
   }
 
   await replyWithEmbed({
@@ -565,6 +595,8 @@ const handleSetTemplate = async (
     return;
   }
 
+  runUpdaterInBackground(interaction.client, updated);
+
   await replyWithEmbed({
     interaction,
     message: t("channelUpdater.success.templateSet", { template }, locale),
@@ -652,7 +684,7 @@ export const channelUpdaterCommand: SlashCommand = {
               t("commands.channelUpdater.option.channel.description")
             )
             .setRequired(true)
-            .addChannelTypes(ChannelType.GuildText)
+            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice)
         )
         .addStringOption((option) =>
           option
@@ -685,7 +717,7 @@ export const channelUpdaterCommand: SlashCommand = {
               t("commands.channelUpdater.option.channel.description")
             )
             .setRequired(true)
-            .addChannelTypes(ChannelType.GuildText)
+            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice)
         )
     )
     .addSubcommand((sub) =>
@@ -710,7 +742,7 @@ export const channelUpdaterCommand: SlashCommand = {
                   t("commands.channelUpdater.option.channel.description")
                 )
                 .setRequired(true)
-                .addChannelTypes(ChannelType.GuildText)
+                .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice)
             )
             .addBooleanOption((option) =>
               option
@@ -734,7 +766,7 @@ export const channelUpdaterCommand: SlashCommand = {
                   t("commands.channelUpdater.option.channel.description")
                 )
                 .setRequired(true)
-                .addChannelTypes(ChannelType.GuildText)
+                .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice)
             )
             .addIntegerOption((option) =>
               option
@@ -760,7 +792,7 @@ export const channelUpdaterCommand: SlashCommand = {
                   t("commands.channelUpdater.option.channel.description")
                 )
                 .setRequired(true)
-                .addChannelTypes(ChannelType.GuildText)
+                .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice)
             )
             .addStringOption((option) =>
               option
@@ -784,7 +816,7 @@ export const channelUpdaterCommand: SlashCommand = {
               t("commands.channelUpdater.option.channel.description")
             )
             .setRequired(true)
-            .addChannelTypes(ChannelType.GuildText)
+            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice)
         )
     )
     .addSubcommand((sub) =>

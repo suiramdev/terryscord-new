@@ -1,6 +1,6 @@
 /* eslint-disable max-statements, no-void */
 
-import { PermissionFlagsBits } from "discord.js";
+import { ChannelType, PermissionFlagsBits } from "discord.js";
 import type { Client, GuildChannel } from "discord.js";
 import { log } from "evlog";
 
@@ -40,7 +40,11 @@ const resolveTargetChannel = async (
 
   const channel = await guild.channels.fetch(channelId).catch(() => null);
 
-  if (!channel || !channel.isTextBased()) {
+  if (
+    !channel ||
+    (channel.type !== ChannelType.GuildText &&
+      channel.type !== ChannelType.GuildVoice)
+  ) {
     return null;
   }
 
@@ -118,17 +122,13 @@ const fetchVariableValues = async ({
   return hasValue ? values : null;
 };
 
-const processUpdater = async ({
+export const applyChannelNameUpdate = async ({
   client,
   updater,
 }: {
   client: Client<true>;
   updater: ChannelNameUpdater;
 }): Promise<boolean> => {
-  if (!shouldRunUpdater(updater)) {
-    return true;
-  }
-
   const placeholders = extractPlaceholders(updater.nameTemplate);
 
   if (placeholders.length === 0) {
@@ -230,6 +230,20 @@ const processUpdater = async ({
 
     return false;
   }
+};
+
+const processUpdater = ({
+  client,
+  updater,
+}: {
+  client: Client<true>;
+  updater: ChannelNameUpdater;
+}): Promise<boolean> => {
+  if (!shouldRunUpdater(updater)) {
+    return Promise.resolve(true);
+  }
+
+  return applyChannelNameUpdate({ client, updater });
 };
 
 const runTick = async (client: Client<true>): Promise<void> => {
