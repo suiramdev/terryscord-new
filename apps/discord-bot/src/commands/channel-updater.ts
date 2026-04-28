@@ -140,7 +140,10 @@ const handleCreate = async (
   const intervalMinutes =
     interaction.options.getInteger("interval") ?? MIN_INTERVAL_MINUTES;
 
-  if (channel.type !== ChannelType.GuildText) {
+  if (
+    channel.type !== ChannelType.GuildText &&
+    channel.type !== ChannelType.GuildVoice
+  ) {
     await replyWithEmbed({
       interaction,
       message: t("channelUpdater.errors.invalidChannelType"),
@@ -652,7 +655,7 @@ export const channelUpdaterCommand: SlashCommand = {
               t("commands.channelUpdater.option.channel.description")
             )
             .setRequired(true)
-            .addChannelTypes(ChannelType.GuildText)
+            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice)
         )
         .addStringOption((option) =>
           option
@@ -685,7 +688,7 @@ export const channelUpdaterCommand: SlashCommand = {
               t("commands.channelUpdater.option.channel.description")
             )
             .setRequired(true)
-            .addChannelTypes(ChannelType.GuildText)
+            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice)
         )
     )
     .addSubcommand((sub) =>
@@ -710,7 +713,7 @@ export const channelUpdaterCommand: SlashCommand = {
                   t("commands.channelUpdater.option.channel.description")
                 )
                 .setRequired(true)
-                .addChannelTypes(ChannelType.GuildText)
+                .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice)
             )
             .addBooleanOption((option) =>
               option
@@ -734,7 +737,7 @@ export const channelUpdaterCommand: SlashCommand = {
                   t("commands.channelUpdater.option.channel.description")
                 )
                 .setRequired(true)
-                .addChannelTypes(ChannelType.GuildText)
+                .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice)
             )
             .addIntegerOption((option) =>
               option
@@ -760,7 +763,7 @@ export const channelUpdaterCommand: SlashCommand = {
                   t("commands.channelUpdater.option.channel.description")
                 )
                 .setRequired(true)
-                .addChannelTypes(ChannelType.GuildText)
+                .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice)
             )
             .addStringOption((option) =>
               option
@@ -784,7 +787,7 @@ export const channelUpdaterCommand: SlashCommand = {
               t("commands.channelUpdater.option.channel.description")
             )
             .setRequired(true)
-            .addChannelTypes(ChannelType.GuildText)
+            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice)
         )
     )
     .addSubcommand((sub) =>

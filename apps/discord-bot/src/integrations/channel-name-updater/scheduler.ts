@@ -1,6 +1,6 @@
 /* eslint-disable max-statements, no-void */
 
-import { PermissionFlagsBits } from "discord.js";
+import { ChannelType, PermissionFlagsBits } from "discord.js";
 import type { Client, GuildChannel } from "discord.js";
 import { log } from "evlog";
 
@@ -40,7 +40,11 @@ const resolveTargetChannel = async (
 
   const channel = await guild.channels.fetch(channelId).catch(() => null);
 
-  if (!channel || !channel.isTextBased()) {
+  if (
+    !channel ||
+    (channel.type !== ChannelType.GuildText &&
+      channel.type !== ChannelType.GuildVoice)
+  ) {
     return null;
   }
 
