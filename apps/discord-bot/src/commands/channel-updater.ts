@@ -15,6 +15,7 @@ import { replyWithEmbed } from "@/discord/embeds";
 import { t } from "@/i18n";
 import {
   applyChannelNameUpdate,
+  createChannelNameUpdater,
   deleteChannelNameUpdater,
   getAllVariableKeys,
   getChannelNameUpdater,
@@ -250,14 +251,12 @@ const handleCreate = async (
         tone: "success",
       });
     } else {
-      updater = await updateChannelNameUpdater({
+      updater = await createChannelNameUpdater({
         channelId: channel.id,
-        patch: {
-          enabled: true,
-          lastUpdatedAt: null,
-          nameTemplate: template,
-          updateIntervalMinutes: intervalMinutes,
-        },
+        enabled: true,
+        guildId,
+        nameTemplate: template,
+        updateIntervalMinutes: intervalMinutes,
       });
 
       await replyWithEmbed({
