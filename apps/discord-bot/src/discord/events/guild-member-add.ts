@@ -14,6 +14,7 @@ import type {
   Guild,
   GuildBasedChannel,
   GuildMember,
+  Message,
   MessageCreateOptions,
   OverwriteResolvable,
   PartialGuildMember,
@@ -1125,6 +1126,32 @@ const awaitCollectorEndReason = async (
   return collector.endReason ?? "unknown";
 };
 
+const hasCaptchaAttachment = (message: Message): boolean =>
+  message.attachments.some(
+    (attachment) => attachment.name === CAPTCHA_IMAGE_FILE_NAME
+  );
+
+const hasCaptchaRegenerateButton = (message: Message): boolean =>
+  message.components.some(
+    (componentRow) =>
+      componentRow.type === ComponentType.ActionRow &&
+      componentRow.components.some(
+        (component) =>
+          component.type === ComponentType.Button &&
+          component.customId === CAPTCHA_REGENERATE_BUTTON_CUSTOM_ID
+      )
+  );
+
+const isReusableCaptchaChallengeMessage = ({
+  botUserId,
+  message,
+}: {
+  botUserId: string;
+  message: Message;
+}): boolean =>
+  message.author.id === botUserId &&
+  (hasCaptchaAttachment(message) || hasCaptchaRegenerateButton(message));
+
 const resolveRecoveryChallengeMessages = async ({
   channel,
 }: {
@@ -1144,16 +1171,12 @@ const resolveRecoveryChallengeMessages = async ({
 
     const messages = await channel.messages.fetch({ limit: 100 });
     const challengeMessages = [...messages.values()]
-      .filter((message) => {
-        if (message.author.id !== botUserId) {
-          return false;
-        }
-
-        const hasCaptchaAttachment = message.attachments.some(
-          (attachment) => attachment.name === CAPTCHA_IMAGE_FILE_NAME
-        );
-        return hasCaptchaAttachment;
-      })
+      .filter((message) =>
+        isReusableCaptchaChallengeMessage({
+          botUserId,
+          message,
+        })
+      )
       .toSorted((a, b) => b.createdTimestamp - a.createdTimestamp);
 
     const [latestChallengeMessage, ...redundantChallengeMessages] =
@@ -1185,11 +1208,18 @@ const resolvePersistedChallengeMessageForRecovery = async ({
   messageId: string;
 }): Promise<string | null> => {
   try {
+    const botUserId = channel.client.user?.id;
+    if (!botUserId) {
+      return null;
+    }
+
     const persistedChallengeMessage = await channel.messages.fetch(messageId);
-    const hasCaptchaAttachment = persistedChallengeMessage.attachments.some(
-      (attachment) => attachment.name === CAPTCHA_IMAGE_FILE_NAME
-    );
-    return hasCaptchaAttachment ? persistedChallengeMessage.id : null;
+    return isReusableCaptchaChallengeMessage({
+      botUserId,
+      message: persistedChallengeMessage,
+    })
+      ? persistedChallengeMessage.id
+      : null;
   } catch {
     return null;
   }
