@@ -12,9 +12,10 @@ import { t } from "@/i18n";
 import {
   createChannelNameUpdater,
   deleteChannelNameUpdater,
+  getAllVariableKeys,
   getChannelNameUpdater,
   listGuildChannelNameUpdaters,
-  listValueProviders,
+  listVariableFetchers,
   updateChannelNameUpdater,
 } from "@/integrations/channel-name-updater";
 
@@ -30,7 +31,7 @@ const SET_ENABLED = "enabled";
 const SET_INTERVAL = "interval";
 const SET_TEMPLATE = "template";
 const SHOW_SUBCOMMAND = "show";
-const SOURCES_SUBCOMMAND = "sources";
+const VARIABLES_SUBCOMMAND = "variables";
 
 const MIN_INTERVAL_MINUTES = 10;
 const MAX_INTERVAL_MINUTES = 1440;
@@ -46,27 +47,19 @@ const extractPlaceholders = (template: string): string[] => {
   ];
 };
 
-const validateTemplatePlaceholders = ({
-  provider,
-  template,
-}: {
-  provider: { providedKeys: string[]; type: string };
-  template: string;
-}): string | null => {
+const validateTemplatePlaceholders = (template: string): string | null => {
   const placeholders = extractPlaceholders(template);
+  const validKeys = getAllVariableKeys();
 
   if (placeholders.length === 0) {
     return t("channelUpdater.errors.missingPlaceholder");
   }
 
-  const unknown = placeholders.filter(
-    (key) => !provider.providedKeys.includes(key)
-  );
+  const unknown = placeholders.filter((key) => !validKeys.includes(key));
 
   if (unknown.length > 0) {
     return t("channelUpdater.errors.unknownPlaceholders", {
       keys: unknown.map((k) => `{${k}}`).join(", "),
-      source: provider.type,
     });
   }
 
@@ -146,7 +139,6 @@ const handleCreate = async (
 
   const channel = interaction.options.getChannel("channel", true);
   const template = interaction.options.getString("template", true).trim();
-  const sourceType = interaction.options.getString("source", true);
   const intervalMinutes =
     interaction.options.getInteger("interval") ?? MIN_INTERVAL_MINUTES;
 
@@ -160,23 +152,7 @@ const handleCreate = async (
     return;
   }
 
-  const providers = listValueProviders();
-  const provider = providers.find((p) => p.type === sourceType);
-
-  if (!provider) {
-    await replyWithEmbed({
-      interaction,
-      message: t("channelUpdater.errors.unknownSourceType"),
-      tone: "error",
-    });
-
-    return;
-  }
-
-  const placeholderError = validateTemplatePlaceholders({
-    provider,
-    template,
-  });
+  const placeholderError = validateTemplatePlaceholders(template);
 
   if (placeholderError) {
     await replyWithEmbed({
@@ -234,7 +210,6 @@ const handleCreate = async (
       enabled: true,
       guildId,
       nameTemplate: template,
-      sourceType,
       updateIntervalMinutes: intervalMinutes,
     });
 
@@ -334,19 +309,13 @@ const handleList = async (
     return;
   }
 
-  const providers = listValueProviders();
-  const providerMap = new Map(providers.map((p) => [p.type, p.description]));
-
   const lines = updaters.map((updater) => {
     const status = updater.enabled ? t("common.enabled") : t("common.disabled");
-    const sourceLabel =
-      providerMap.get(updater.sourceType) ?? updater.sourceType;
 
     return [
       `**\`${updater.id}\`** — ${status}`,
       `  ${t("channelUpdater.show.channel")}: <#${updater.channelId}>`,
       `  ${t("channelUpdater.show.template")}: \`${updater.nameTemplate}\``,
-      `  ${t("channelUpdater.show.source")}: ${sourceLabel}`,
       `  ${t("channelUpdater.show.interval")}: ${updater.updateIntervalMinutes}min`,
     ].join("\n");
   });
@@ -610,25 +579,16 @@ const handleSetTemplate = async (
     return;
   }
 
-  const provider = listValueProviders().find(
-    (p) => p.type === updater.sourceType
-  );
+  const placeholderError = validateTemplatePlaceholders(template);
 
-  if (provider) {
-    const placeholderError = validateTemplatePlaceholders({
-      provider,
-      template,
+  if (placeholderError) {
+    await replyWithEmbed({
+      interaction,
+      message: placeholderError,
+      tone: "error",
     });
 
-    if (placeholderError) {
-      await replyWithEmbed({
-        interaction,
-        message: placeholderError,
-        tone: "error",
-      });
-
-      return;
-    }
+    return;
   }
 
   const updated = await updateChannelNameUpdater({
@@ -684,15 +644,11 @@ const handleShow = async (
     return;
   }
 
-  const providers = listValueProviders();
-  const provider = providers.find((p) => p.type === updater.sourceType);
-
   const lines = [
     `**ID**: \`${updater.id}\``,
     `${t("channelUpdater.show.enabled")}: ${updater.enabled ? t("common.enabled") : t("common.disabled")}`,
     `${t("channelUpdater.show.channel")}: <#${updater.channelId}>`,
     `${t("channelUpdater.show.template")}: \`${updater.nameTemplate}\``,
-    `${t("channelUpdater.show.source")}: ${provider?.description ?? updater.sourceType}`,
     `${t("channelUpdater.show.interval")}: ${updater.updateIntervalMinutes}min`,
     `${t("channelUpdater.show.lastUpdated")}: ${updater.lastUpdatedAt ? updater.lastUpdatedAt.toLocaleString("fr-FR") : t("common.notConfigured")}`,
   ];
@@ -704,26 +660,18 @@ const handleShow = async (
   });
 };
 
-const handleSources = async (
+const handleVariables = async (
   interaction: ChatInputCommandInteraction
 ): Promise<void> => {
-  const providers = listValueProviders();
+  const fetchers = listVariableFetchers();
 
-  const lines = providers.map((provider) => {
-    const placeholderList = provider.providedKeys
-      .map((key) => `{${key}}`)
-      .join(", ");
-
-    const placeholders = t("channelUpdater.info.sourcePlaceholders", {
-      placeholders: placeholderList,
-    });
-
-    return `**${provider.type}** — ${provider.description}\n  ${placeholders}`;
-  });
+  const lines = fetchers.map(
+    (fetcher) => `**{${fetcher.key}}** — ${fetcher.description}`
+  );
 
   await replyWithEmbed({
     interaction,
-    message: lines.join("\n\n") || t("channelUpdater.info.noSources"),
+    message: lines.join("\n") || t("channelUpdater.info.noVariables"),
     tone: "info",
   });
 };
@@ -755,19 +703,6 @@ export const channelUpdaterCommand: SlashCommand = {
             )
             .setRequired(true)
             .setMaxLength(100)
-        )
-        .addStringOption((option) =>
-          option
-            .setName("source")
-            .setDescription(
-              t("commands.channelUpdater.option.source.description")
-            )
-            .setRequired(true)
-            .addChoices(
-              { name: "Discord Server Stats", value: "discord_server" },
-              { name: "Steam Players (s&box)", value: "steam_players" },
-              { name: "Active Giveaways", value: "active_giveaways" }
-            )
         )
         .addIntegerOption((option) =>
           option
@@ -910,8 +845,8 @@ export const channelUpdaterCommand: SlashCommand = {
     )
     .addSubcommand((sub) =>
       sub
-        .setName(SOURCES_SUBCOMMAND)
-        .setDescription(t("commands.channelUpdater.sub.sources.description"))
+        .setName(VARIABLES_SUBCOMMAND)
+        .setDescription(t("commands.channelUpdater.sub.variables.description"))
     ),
   async execute(interaction) {
     const group = interaction.options.getSubcommandGroup();
@@ -959,8 +894,8 @@ export const channelUpdaterCommand: SlashCommand = {
       return;
     }
 
-    if (subcommand === SOURCES_SUBCOMMAND) {
-      await handleSources(interaction);
+    if (subcommand === VARIABLES_SUBCOMMAND) {
+      await handleVariables(interaction);
       return;
     }
 

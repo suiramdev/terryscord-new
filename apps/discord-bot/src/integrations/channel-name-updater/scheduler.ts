@@ -4,15 +4,26 @@ import { PermissionFlagsBits } from "discord.js";
 import type { Client, GuildChannel } from "discord.js";
 import { log } from "evlog";
 
-import { getValueProvider } from "./providers";
 import {
   listEnabledChannelNameUpdaters,
   updateChannelNameUpdater,
 } from "./settings";
 import type { ChannelNameUpdater } from "./settings";
+import { getVariableFetcher } from "./variables";
 
 const MANAGE_CHANNELS_PERMISSION = PermissionFlagsBits.ManageChannels;
 const TICK_INTERVAL_SECONDS = 60;
+
+const extractPlaceholders = (template: string): string[] => {
+  const matches = template.matchAll(/\{([a-zA-Z0-9_]+)\}/g);
+  return [
+    ...new Set(
+      [...matches]
+        .map((match) => match[1])
+        .filter((value): value is string => typeof value === "string")
+    ),
+  ];
+};
 
 const resolveTargetChannel = async (
   client: Client<true>,
@@ -77,6 +88,36 @@ const shouldRunUpdater = (updater: ChannelNameUpdater): boolean => {
   return elapsedMs >= intervalMs;
 };
 
+const fetchVariableValues = async ({
+  client,
+  guildId,
+  placeholders,
+}: {
+  client: Client<true>;
+  guildId: string;
+  placeholders: string[];
+}): Promise<Record<string, string | number> | null> => {
+  const values: Record<string, string | number> = {};
+  let hasValue = false;
+
+  for (const key of placeholders) {
+    const fetcher = getVariableFetcher(key);
+
+    if (!fetcher) {
+      continue;
+    }
+
+    const value = await fetcher.fetch(guildId, client);
+
+    if (value !== null) {
+      values[key] = value;
+      hasValue = true;
+    }
+  }
+
+  return hasValue ? values : null;
+};
+
 const processUpdater = async ({
   client,
   updater,
@@ -88,27 +129,26 @@ const processUpdater = async ({
     return true;
   }
 
-  const provider = getValueProvider(updater.sourceType);
-  if (!provider) {
+  const placeholders = extractPlaceholders(updater.nameTemplate);
+
+  if (placeholders.length === 0) {
     log.warn({
-      message: "Unknown channel name updater source type",
-      sourceType: updater.sourceType,
+      message: "Channel name updater template contains no placeholders",
       updaterId: updater.id,
     });
 
     return false;
   }
 
-  const values = await provider.fetchValues(
-    updater.guildId,
-    updater.sourceConfig ?? undefined,
-    client
-  );
+  const values = await fetchVariableValues({
+    client,
+    guildId: updater.guildId,
+    placeholders,
+  });
 
   if (values === null) {
     log.debug({
-      message: "Channel name updater source returned no values",
-      sourceType: updater.sourceType,
+      message: "No variable values resolved for channel name updater",
       updaterId: updater.id,
     });
 

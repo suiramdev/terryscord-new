@@ -175,16 +175,15 @@ export const frTranslations = {
     "Cette commande peut uniquement être utilisée dans un serveur.",
   "channelUpdater.errors.templateLength":
     "Le modèle doit contenir entre 1 et 100 caractères.",
-  "channelUpdater.errors.unknownPlaceholders":
-    "Placeholders inconnus pour la source `{source}` : {keys}",
+  "channelUpdater.errors.unknownPlaceholders": "Placeholders inconnus : {keys}",
   "channelUpdater.errors.unknownSourceType": "Source de données inconnue.",
   "channelUpdater.errors.unsupportedSubcommand":
     "Sous-commande non prise en charge.",
   "channelUpdater.errors.updaterNotFound": "Renommeur introuvable.",
   "channelUpdater.errors.updaterNotInGuild":
     "Ce renommeur n'appartient pas à ce serveur.",
-  "channelUpdater.info.noSources": "Aucune source de données disponible.",
   "channelUpdater.info.noUpdaters": "Aucun renommeur configuré sur ce serveur.",
+  "channelUpdater.info.noVariables": "Aucune variable disponible.",
   "channelUpdater.info.sourcePlaceholders":
     "Placeholders disponibles : {placeholders}",
   "channelUpdater.show.channel": "Salon",
@@ -314,8 +313,8 @@ export const frTranslations = {
     "Changer le modèle de nom d'un renommeur",
   "commands.channelUpdater.sub.show.description":
     "Afficher les détails d'un renommeur",
-  "commands.channelUpdater.sub.sources.description":
-    "Lister les sources de données disponibles",
+  "commands.channelUpdater.sub.variables.description":
+    "Lister les variables disponibles",
   "commands.deleteCategoryChannels.description":
     "Suppression avancée de messages/salons/catégories avec ciblage",
   "commands.deleteCategoryChannels.option.category.description":

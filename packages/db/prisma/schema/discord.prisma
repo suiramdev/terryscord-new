@@ -111,8 +111,6 @@ model GuildChannelNameUpdater {
   channelId             String
   nameTemplate          String
   updateIntervalMinutes Int      @default(10)
-  sourceType            String
-  sourceConfig          String?
   enabled               Boolean  @default(false)
   lastUpdatedAt         DateTime?
   createdAt             DateTime @default(now())

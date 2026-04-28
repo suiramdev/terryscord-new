@@ -8,8 +8,6 @@ export interface ChannelNameUpdater {
   id: string;
   lastUpdatedAt: Date | null;
   nameTemplate: string;
-  sourceConfig: string | null;
-  sourceType: string;
   updateIntervalMinutes: number;
   updatedAt: Date;
 }
@@ -19,8 +17,6 @@ export interface ChannelNameUpdaterPatch {
   enabled?: boolean | null;
   lastUpdatedAt?: Date | null;
   nameTemplate?: string | null;
-  sourceConfig?: string | null;
-  sourceType?: string | null;
   updateIntervalMinutes?: number | null;
 }
 
@@ -32,8 +28,6 @@ interface ChannelNameUpdaterRecord {
   id: string;
   lastUpdatedAt: Date | string | null;
   nameTemplate: string;
-  sourceConfig: string | null;
-  sourceType: string;
   updateIntervalMinutes: number;
   updatedAt: Date | string;
 }
@@ -88,8 +82,6 @@ const ensureSchema = async (
         "channelId" TEXT NOT NULL,
         "nameTemplate" TEXT NOT NULL,
         "updateIntervalMinutes" INTEGER NOT NULL DEFAULT 10,
-        "sourceType" TEXT NOT NULL,
-        "sourceConfig" TEXT,
         "enabled" BOOLEAN NOT NULL DEFAULT false,
         "lastUpdatedAt" TIMESTAMP(3),
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -132,8 +124,6 @@ const toUpdater = (record: ChannelNameUpdaterRecord): ChannelNameUpdater => ({
   id: record.id,
   lastUpdatedAt: toOptionalDate(record.lastUpdatedAt),
   nameTemplate: record.nameTemplate,
-  sourceConfig: record.sourceConfig,
-  sourceType: record.sourceType,
   updateIntervalMinutes: record.updateIntervalMinutes,
   updatedAt: toDate(record.updatedAt),
 });
@@ -150,14 +140,12 @@ export const createChannelNameUpdater = async ({
   enabled,
   guildId,
   nameTemplate,
-  sourceType,
   updateIntervalMinutes,
 }: {
   channelId: string;
   enabled: boolean;
   guildId: string;
   nameTemplate: string;
-  sourceType: string;
   updateIntervalMinutes: number;
 }): Promise<ChannelNameUpdater> => {
   const prisma = await loadPrismaClient();
@@ -169,7 +157,6 @@ export const createChannelNameUpdater = async ({
       enabled,
       guildId,
       nameTemplate,
-      sourceType,
       updateIntervalMinutes,
     },
   });
