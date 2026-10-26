@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # Use Debian-based Bun image for better native module compatibility.
-FROM oven/bun:1.3.5 AS base
+FROM oven/bun:1.4.4 AS base
 WORKDIR /app
 
 # Create a minimal monorepo snapshot for the discord-bot workspace.
